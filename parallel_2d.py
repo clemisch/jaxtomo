@@ -6,9 +6,10 @@ from functools import partial
 from util import multi_vmap
 
 
-print("UPDATED")
+print("UPDATED P")
 
 
+# redefine jax.lax.map to get unroll support
 def map(f, xs, unroll=1):
   g = lambda _, x: ((), f(x))
   _, ys = jax.lax.scan(g, (), xs, unroll=unroll)
@@ -45,22 +46,24 @@ def get_ray_2d(vol, theta, u, v, xx, yy):
         )
         return val
 
-    # use vmap
-    points = jax.vmap(get_point)(xx, vol.transpose((1, 0, 2)))
-    ray = jnp.sum(points)
 
-    # use scan
-    # def body_fun(carry, x):
-    #     z, img_slice = x
-    #     val = get_point(z, img_slice)[0]
-    #     carry = carry + val
-    #     return carry, None
+    use_vmap = True
 
-    # ray, _ = jax.lax.scan(
-    #     body_fun, 0., 
-    #     (xx, vol.transpose((1, 0, 2))),
-    #     unroll=32
-    # )
+    if use_vmap:
+        points = jax.vmap(get_point)(xx, vol.transpose((1, 0, 2)))
+        ray = jnp.sum(points)
+    else:
+        def body_fun(carry, x):
+            z, img_slice = x
+            val = get_point(z, img_slice)[0]
+            carry = carry + val
+            return carry, None
+
+        ray, _ = jax.lax.scan(
+            body_fun, 0., 
+            (xx, vol.transpose((1, 0, 2))),
+            unroll=16
+        )
 
     # weight with length through voxel
     ray = ray / jnp.cos(theta)
@@ -71,7 +74,6 @@ def get_ray_2d(vol, theta, u, v, xx, yy):
 
 @partial(jax.jit, static_argnames=("U", "V"))
 def get_proj_2d(vol, theta, dX, U, dU, V, dV):
-
     def cond_fun(arg):
         angle, _ = arg
         is_valid_angle = jnp.logical_and(
@@ -120,8 +122,6 @@ def get_proj_2d(vol, theta, dX, U, dU, V, dV):
         ((None, None, 0, None, None, None), (None, None, None, 1, None, None)),
         (0, 0)
     )
-
-
     proj = get_proj(vol, theta, uu[:, None], vv[None], xx, yy)
 
     # get_row = jax.vmap(get_ray_2d, (None, None, 0, None, None, None), 0)
