@@ -1,3 +1,10 @@
+"""\
+2D parallel projector
+
+Instead of one ray to one pixel being the innermost loop, interpolating all 
+rays over one volume slice is the innermost loop. 
+"""
+
 import jax
 import jax.numpy as jnp
 import jax.scipy as jsp
@@ -5,9 +12,10 @@ import jax.scipy as jsp
 from functools import partial
 from util import multi_vmap
 
-print("UPDATED")
+print("UPDATED PINV")
 
 
+# redefine jax.lax.map to get unroll support
 def map(f, xs, unroll=1):
   g = lambda _, x: ((), f(x))
   _, ys = jax.lax.scan(g, (), xs, unroll=unroll)
@@ -24,46 +32,43 @@ def interp2d(x, y, xlim, ylim, vals):
     y = (y - y_lo) * (n_y - 1.) / (y_hi - y_lo)
 
     vals_interp = jsp.ndimage.map_coordinates(
-        vals, 
-        (x, y), 
+        vals,
+        (x, y),
         order=1,
-        mode="constant", 
+        mode="constant",
         cval=0.0,
     )
     return vals_interp
 
 
 
-def get_slice(vol, theta, )
-
-
-
-
-def get_ray_2d(vol, theta, u, v, xx, yy):
-    def get_point(z, img_slice):
+def get_slice_2d(vol_slice, z, theta, uu, vv, xx, yy):
+    def get_point(u, v):
         x = 1. / jnp.cos(theta) * (u - z * jnp.sin(theta))
         val = interp2d(
             v, x,
             (yy[0], yy[-1]),
             (xx[0], xx[-1]),
-            img_slice
-        )
+            vol_slice
+        )[0]
         return val
 
-    # use vmap
-    points = jax.vmap(get_point)(xx, vol.transpose((1, 0, 2)))
-    ray = jnp.sum(points)
+    get_proj = multi_vmap(
+        get_point,
+        ((0, None), (None, 1)),
+        (0, 0)
+    )
+    proj = get_proj(uu[:, None], vv[None])
 
-    # weight with length through voxel
-    ray = ray / jnp.cos(theta)
+    return proj
 
-    return ray
 
 
 
 @partial(jax.jit, static_argnames=("U", "V"))
 def get_proj_2d(vol, theta, dX, U, dU, V, dV):
 
+    # transpose volume until angle is valid
     def cond_fun(arg):
         angle, _ = arg
         is_valid_angle = jnp.logical_and(
@@ -106,10 +111,40 @@ def get_proj_2d(vol, theta, dX, U, dU, V, dV):
     uu = jnp.linspace(0., 1., U, endpoint=True) * width_proj + O_U
     vv = jnp.linspace(0., 1., V, endpoint=True) * height_proj + O_V
 
-    get_line = jax.vmap(get_ray_2d, (None, None, 0, None, None, None), 0)
-    get_proj = jax.vmap(get_line, (None, None, None, 1, None, None), 0)
+    # map vol slices and z
+    use_vmap = True
 
-    proj = get_proj(vol, theta, uu[:, None], vv[None], xx, yy)
+    if use_vmap:
+        get_proj = jax.vmap(
+            get_slice_2d,
+            (0, 0, None, None, None, None, None),
+            0
+        )
+        proj = get_proj(
+            vol.transpose((1, 0, 2)), 
+            xx, theta, uu, vv, xx, yy
+        )
+        proj = proj.sum(0)
+
+    else:
+        def body_fun(carry, elem):
+            vol_slice, z = elem
+            interp_slice = get_slice_2d(
+                vol_slice, z,
+                theta, uu, vv, xx, yy 
+            )
+            carry = carry + interp_slice
+            return carry, None
+
+        proj, _ = jax.lax.scan(
+            body_fun,
+            jnp.zeros((V, U), dtype=vol.dtype),            
+            (vol.transpose((1, 0, 2)), xx),
+            unroll=16
+        )
+
+    # weight with length through voxel
+    proj = proj / jnp.cos(theta)
 
     return proj
 
@@ -122,11 +157,6 @@ def get_projs_2d(vol, thetas, dX, U, dU, V, dV):
     #     (None, 0, None, None, None, None, None),
     #      0
     # )(vol, thetas, dX, U, dU, V, dV)
-
-    # projs = jax.lax.map(
-    #     lambda theta: get_proj_2d(vol, theta, dX, U, dU, V, dV),
-    #     thetas
-    # )
 
     projs = map(
         lambda theta: get_proj_2d(vol, theta, dX, U, dU, V, dV),
