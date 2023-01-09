@@ -8,14 +8,14 @@ They are implemented purely in Python, which makes the code readable and hackabl
 
 This is a personal project and very work-in-progress. It is meant as a learning exercise for me, a pedagogical implementation for others (once I add some comments), and maybe even a tool for implementing proof-of-concept pipelines.
 
-## Features:
+## Features
 
 * Parallel beam
 * Fan beam
 * FBP
 * ... all with a flat detector
 
-## Todo: 
+## Todo
 
 * Cone beam
 * Registering FP and BP as their respective transpose for autodiff with JAX
