@@ -88,7 +88,8 @@ def get_bp_once(proj, theta, dU, dV, X, Y, dX, S, D):
         (0, 0, 0)
     )
 
-    vol = get_voxels(proj, theta, 
+    vol = get_voxels(
+        proj, theta,
         xx[:   , None, None], 
         yy[None, :   , None], 
         xx[None, None, :   ], 
