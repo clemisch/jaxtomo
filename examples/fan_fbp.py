@@ -31,10 +31,12 @@ fbp = P_bp.get_bp(projs_f, angles, M, 1., N, 16, 1., S, D)
 fbp = fbp / n_angles
 
 
-fig, ax = subplots(1, 2, figsize=(10, 5))
+fig, ax = subplots(1, 3, figsize=(14, 5))
 ax[0].imshow(vol[0], vmin=0, vmax=1)
-ax[1].imshow(fbp[:, 7], vmin=0, vmax=1)
+ax[1].imshow(projs[:256, 0])
+ax[2].imshow(fbp[:, 7], vmin=0, vmax=1)
 ax[0].set_title("Original")
-ax[1].set_title("FBP")
+ax[1].set_title("Sinogram")
+ax[2].set_title("FBP")
 tight_layout()
 show()
