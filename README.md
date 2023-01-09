@@ -6,7 +6,7 @@ They are implemented purely in Python, which makes the code readable and hackabl
 
 ## Disclaimer
 
-This is a personal project and very work-in-progress. It is meant as a learning exercise for me, a pedagogical implementation for others, and maybe even a tool for implementing proof-of-concept pipelines.
+This is a personal project and very work-in-progress. It is meant as a learning exercise for me, a pedagogical implementation for others (once I add some comments), and maybe even a tool for implementing proof-of-concept pipelines.
 
 ## Features:
 
