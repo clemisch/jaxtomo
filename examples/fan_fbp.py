@@ -1,13 +1,11 @@
 from pylab import *
 import scipy.ndimage as nd
 from skimage.data import shepp_logan_phantom
-from skimage.transform import radon
 import jax
 
 from jaxtomo import fan_fp as P_fp
 from jaxtomo import fan_bp as P_bp
 from jaxtomo import proj_filter
-from jaxtomo import util
 
 
 img = shepp_logan_phantom()
