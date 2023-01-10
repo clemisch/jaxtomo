@@ -42,7 +42,8 @@ def _get_ray_2d(vol, theta, u, v, xx, yy, S, D):
     use_vmap = True
 
     if use_vmap:
-        points = jax.vmap(get_point)(xx, vol.transpose((1, 0, 2)))
+        # points = jax.vmap(get_point)(xx, vol.transpose((1, 0, 2)))
+        points = jax.vmap(get_point, (0, 1), 0)(xx, vol)
         ray = jnp.sum(points)
     else:
         def body_fun(carry, x):
@@ -115,11 +116,11 @@ def _get_fp_angle(vol, theta, dX, U, dU, V, dV, S, D):
         _get_ray_2d,
         (
             (None, None, 0, None, None, None, None, None), 
-            (None, None, None, 1, None, None, None, None)
+            (None, None, None, 0, None, None, None, None)
         ),
         (0, 0)
     )
-    proj = get_proj(vol, theta, uu[:, None], vv[None], xx, yy, S, D)
+    proj = get_proj(vol, theta, uu, vv, xx, yy, S, D)
 
     # get_row = jax.vmap(_get_ray_2d, (None, None, 0, None, None, None), 0)
     # proj = jax.lax.map(

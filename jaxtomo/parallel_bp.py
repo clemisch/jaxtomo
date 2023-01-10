@@ -3,39 +3,10 @@ import jax.numpy as jnp
 import jax.scipy as jsp
 from functools import partial
 
-from .util import multi_vmap
+from .util import multi_vmap, interp2d, jaxmap
 
 
-print("UPDATED PARALLEL BP")
-
-
-# redefine jax.lax.map to get unroll support
-def map(f, xs, unroll=1):
-  g = lambda _, x: ((), f(x))
-  _, ys = jax.lax.scan(g, (), xs, unroll=unroll)
-  return ys
-
-
-def interp2d(x, y, xlim, ylim, vals):
-    x_lo, x_hi = xlim
-    y_lo, y_hi = ylim
-    n_x, n_y = vals.shape
-
-    # transform x,y into pixel values
-    x = (x - x_lo) * (n_x - 1.) / (x_hi - x_lo)
-    y = (y - y_lo) * (n_y - 1.) / (y_hi - y_lo)
-
-    vals_interp = jsp.ndimage.map_coordinates(
-        vals, 
-        (x, y), 
-        order=1,
-        mode="constant", 
-        cval=0.0,
-    )
-    return vals_interp
-
-
-def get_voxel(proj, theta, x, y, z, uu, vv):
+def _get_voxel(proj, theta, x, y, z, uu, vv):
     u = x * jnp.cos(theta) + z * jnp.sin(theta)
     val = interp2d(
         y, u, 
@@ -52,7 +23,7 @@ def get_voxel(proj, theta, x, y, z, uu, vv):
 
 
 @partial(jax.jit, static_argnames=("X", "Y"))
-def get_bp_once(proj, theta, dU, dV, X, Y, dX):
+def _get_bp_angle(proj, theta, dU, dV, X, Y, dX):
     dY = dX
     V = proj.shape[0]
     U = proj.shape[1]
@@ -76,22 +47,15 @@ def get_bp_once(proj, theta, dU, dV, X, Y, dX):
 
 
     get_voxels = multi_vmap(
-        get_voxel,
+        _get_voxel,
         (
             (None, None, 0   , None, None, None, None),
-            (None, None, None, 1   , None, None, None),
-            (None, None, None, None, 2   , None, None),
+            (None, None, None, None, 0   , None, None),
+            (None, None, None, 0   , None, None, None),
         ),
         (0, 0, 0)
     )
-
-    vol = get_voxels(
-        proj, theta,
-        xx[:   , None, None], 
-        yy[None, :   , None], 
-        xx[None, None, :   ], 
-        uu, vv
-    )
+    vol = get_voxels(proj, theta, xx, yy, xx, uu, vv)
 
     return vol
 
@@ -102,13 +66,13 @@ def get_bp(projs, thetas, dU, dV, X, Y, dX):
 
     def body_fun(carry, elem):
         proj, theta = elem
-        bp = get_bp_once(proj, theta, dU, dV, X, Y, dX)
+        bp = _get_bp_angle(proj, theta, dU, dV, X, Y, dX)
         carry = carry + bp
         return carry, None
 
     vol, _ = jax.lax.scan(
         body_fun,
-        jnp.zeros((X, Y, X), dtype=projs.dtype),
+        jnp.zeros((Y, X, X), dtype=projs.dtype),
         (projs, thetas)
     )
 

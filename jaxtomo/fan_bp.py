@@ -48,24 +48,16 @@ def _get_bp_angle(proj, theta, dU, dV, X, Y, dX, S, D):
     uu = jnp.linspace(0., 1., U, endpoint=True) * width_proj + O_U
     vv = jnp.linspace(0., 1., V, endpoint=True) * height_proj + O_V
 
-
     get_voxels = multi_vmap(
         _get_voxel,
         (
             (None, None, 0   , None, None, None, None, None, None),
-            (None, None, None, 1   , None, None, None, None, None),
-            (None, None, None, None, 2   , None, None, None, None),
+            (None, None, None, None, 0   , None, None, None, None),
+            (None, None, None, 0   , None, None, None, None, None),
         ),
         (0, 0, 0)
     )
-
-    vol = get_voxels(
-        proj, theta,
-        xx[:   , None, None], 
-        yy[None, :   , None], 
-        xx[None, None, :   ], 
-        uu, vv, S, D
-    )
+    vol = get_voxels(proj, theta, xx, yy, xx, uu, vv, S, D)
 
     return vol
 
@@ -82,7 +74,7 @@ def get_bp(projs, thetas, dU, dV, X, Y, dX, S, D):
 
     vol, _ = jax.lax.scan(
         body_fun,
-        jnp.zeros((X, Y, X), dtype=projs.dtype),
+        jnp.zeros((Y, X, X), dtype=projs.dtype),
         (projs, thetas)
     )
 

@@ -3,39 +3,10 @@ import jax.numpy as jnp
 import jax.scipy as jsp
 from functools import partial
 
-from .util import multi_vmap
+from .util import multi_vmap, interp2d, jaxmap
 
 
-print("UPDATED PARALLEL FP")
-
-
-# redefine jax.lax.map to get unroll support
-def map(f, xs, unroll=1):
-  g = lambda _, x: ((), f(x))
-  _, ys = jax.lax.scan(g, (), xs, unroll=unroll)
-  return ys
-
-
-def interp2d(x, y, xlim, ylim, vals):
-    x_lo, x_hi = xlim
-    y_lo, y_hi = ylim
-    n_x, n_y = vals.shape
-
-    # transform x,y into pixel values
-    x = (x - x_lo) * (n_x - 1.) / (x_hi - x_lo)
-    y = (y - y_lo) * (n_y - 1.) / (y_hi - y_lo)
-
-    vals_interp = jsp.ndimage.map_coordinates(
-        vals, 
-        (x, y), 
-        order=1,
-        mode="constant", 
-        cval=0.0,
-    )
-    return vals_interp
-
-
-def get_ray_2d(vol, theta, u, v, xx, yy):
+def _get_ray_2d(vol, theta, u, v, xx, yy):
     def get_point(z, img_slice):
         x = 1. / jnp.cos(theta) * (u - z * jnp.sin(theta))
         val = interp2d(
@@ -50,7 +21,7 @@ def get_ray_2d(vol, theta, u, v, xx, yy):
     use_vmap = True
 
     if use_vmap:
-        points = jax.vmap(get_point)(xx, vol.transpose((1, 0, 2)))
+        points = jax.vmap(get_point, (0, 1), 0)(xx, vol)
         ray = jnp.sum(points)
     else:
         def body_fun(carry, x):
@@ -73,7 +44,7 @@ def get_ray_2d(vol, theta, u, v, xx, yy):
 
 
 @partial(jax.jit, static_argnames=("U", "V"))
-def get_proj_2d(vol, theta, dX, U, dU, V, dV):
+def _get_fp_angle(vol, theta, dX, U, dU, V, dV):
     def cond_fun(arg):
         angle, _ = arg
         is_valid_angle = jnp.logical_and(
@@ -118,11 +89,14 @@ def get_proj_2d(vol, theta, dX, U, dU, V, dV):
 
 
     get_proj = multi_vmap(
-        get_ray_2d,
-        ((None, None, 0, None, None, None), (None, None, None, 1, None, None)),
+        _get_ray_2d,
+        (   
+            (None, None, 0, None, None, None), 
+            (None, None, None, 0, None, None)
+        ),
         (0, 0)
     )
-    proj = get_proj(vol, theta, uu[:, None], vv[None], xx, yy)
+    proj = get_proj(vol, theta, uu, vv, xx, yy)
 
     # get_row = jax.vmap(get_ray_2d, (None, None, 0, None, None, None), 0)
     # proj = jax.lax.map(
@@ -134,7 +108,7 @@ def get_proj_2d(vol, theta, dX, U, dU, V, dV):
 
 
 @partial(jax.jit, static_argnames=("U", "V"))
-def get_projs_2d(vol, thetas, dX, U, dU, V, dV):
+def get_fp(vol, thetas, dX, U, dU, V, dV):
     
     # projs = jax.vmap(
     #     get_proj_2d, 
@@ -148,7 +122,7 @@ def get_projs_2d(vol, thetas, dX, U, dU, V, dV):
     # )
 
     projs = map(
-        lambda theta: get_proj_2d(vol, theta, dX, U, dU, V, dV),
+        lambda theta: _get_fp_angle(vol, theta, dX, U, dU, V, dV),
         thetas,
         unroll=1
     )
