@@ -20,8 +20,8 @@ M = (D - S) / abs(S)
 
 n_angles = N * 2
 angles = linspace(0, 2 * pi, n_angles, False)
-projs = P_fp.get_projs_2d(vol, angles, 1., N, M, 10, 1., S, D)
-vol_bp = P_bp.get_bp(projs, angles, M, 1., N, 16, 1., S, D)
+projs = P_fp.get_fp(vol, angles, 1., N, M, 10, 1., S, D)
+vol_bp, vols = P_bp.get_bp(projs, angles, M, 1., N, 16, 1., S, D)
 
 w = proj_filter.gen_fbp_weights(N)
 projs_f = proj_filter.proj_filter(projs, w)
