@@ -23,5 +23,5 @@ This is a personal project and very work-in-progress. It is meant as a learning 
 
 ## Proof of concept
 
-![image](https://user-images.githubusercontent.com/5190547/211380328-552f20cd-112b-4d8a-81be-1c725d5f7023.png)
+![image](https://user-images.githubusercontent.com/5190547/211600423-5d58e137-d87f-4a7d-9eec-f6b147a50aae.png)
 
