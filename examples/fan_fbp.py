@@ -1,4 +1,3 @@
-from pylab import *
 import scipy.ndimage as nd
 from skimage.data import shepp_logan_phantom
 import jax
@@ -21,7 +20,7 @@ M = (D - S) / abs(S)
 n_angles = N * 2
 angles = linspace(0, 2 * pi, n_angles, False)
 projs = P_fp.get_fp(vol, angles, 1., N, M, 10, 1., S, D)
-vol_bp, vols = P_bp.get_bp(projs, angles, M, 1., N, 16, 1., S, D)
+vol_bp = P_bp.get_bp(projs, angles, M, 1., N, 16, 1., S, D)
 
 w = proj_filter.gen_fbp_weights(N)
 projs_f = proj_filter.proj_filter(projs, w)
@@ -31,10 +30,10 @@ fbp = fbp / n_angles
 
 fig, ax = subplots(1, 3, figsize=(14, 5))
 ax[0].imshow(vol[0], vmin=0, vmax=1)
-ax[1].imshow(projs[:256, 0])
-ax[2].imshow(fbp[:, 7], vmin=0, vmax=1)
+ax[1].imshow(projs[:N, 0])
+ax[2].imshow(fbp[7], vmin=0, vmax=1)
 ax[0].set_title("Original")
-ax[1].set_title("Sinogram")
+ax[1].set_title("Sinogram (fan beam)")
 ax[2].set_title("FBP")
 tight_layout()
 show()
