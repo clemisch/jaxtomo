@@ -14,11 +14,11 @@ This is a personal project and very work-in-progress. It is meant as a learning 
 * Fan beam
 * FBP
 * ... all with a flat detector
+* FP and BP registered as respective transpose for autodiff with JAX
 
 ## Todo
 
 * Cone beam
-* Registering FP and BP as their respective transpose for autodiff with JAX
 * Curved detector
 
 ## Proof of concept
