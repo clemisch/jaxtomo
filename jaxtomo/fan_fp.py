@@ -1,23 +1,11 @@
 import jax
 import jax.numpy as jnp
-import jax.scipy as jsp
 from functools import partial
 
-from .util import multi_vmap
+from .util import multi_vmap, interp2d, jaxmap
 
 
-print("UPDATED FAN")
-
-
-# redefine jax.lax.map to get unroll support
-def map(f, xs, unroll=1):
-  g = lambda _, x: ((), f(x))
-  _, ys = jax.lax.scan(g, (), xs, unroll=unroll)
-  return ys
-
-
-
-def solve_2d(A, b):
+def _solve_2d(A, b):
     det = A[0, 0] * A[1, 1] - A[0, 1] * A[1, 0]
     A_inv = jnp.array(
         (A[1, 1], -A[0, 1], -A[1, 0], A[0, 0]), 
@@ -28,28 +16,7 @@ def solve_2d(A, b):
     return x
 
 
-
-
-def interp2d(x, y, xlims, ylims, vals):
-    x_lo, x_hi = xlims
-    y_lo, y_hi = ylims
-    n_x, n_y = vals.shape
-
-    # transform x,y into pixel values
-    x = (x - x_lo) * (n_x - 1.) / (x_hi - x_lo)
-    y = (y - y_lo) * (n_y - 1.) / (y_hi - y_lo)
-
-    vals_interp = jsp.ndimage.map_coordinates(
-        vals, 
-        (x, y), 
-        order=1,
-        mode="constant", 
-        cval=0.0,
-    )
-    return vals_interp
-
-
-def get_ray_2d(vol, theta, u, v, xx, yy, S, D):
+def _get_ray_2d(vol, theta, u, v, xx, yy, S, D):
     u = jnp.squeeze(u)
     v = jnp.squeeze(v)
 
@@ -60,7 +27,7 @@ def get_ray_2d(vol, theta, u, v, xx, yy, S, D):
         ).reshape(2, 2)
         b = jnp.array(((u * S) / (D - S), z), dtype=vol.dtype)
 
-        z_, x_ = solve_2d(A, b)
+        z_, x_ = _solve_2d(A, b)
         x = x_ * jnp.cos(theta) - z_ * jnp.sin(theta)
 
         val = interp2d(
@@ -99,7 +66,7 @@ def get_ray_2d(vol, theta, u, v, xx, yy, S, D):
 
 
 @partial(jax.jit, static_argnames=("U", "V"))
-def get_proj_2d(vol, theta, dX, U, dU, V, dV, S, D):
+def _get_fp_angle(vol, theta, dX, U, dU, V, dV, S, D):
     def cond_fun(arg):
         angle, _ = arg
         is_valid_angle = jnp.logical_and(
@@ -137,14 +104,15 @@ def get_proj_2d(vol, theta, dX, U, dU, V, dV, S, D):
     O_U = dU * (-0.5 * U + 0.5)
     O_V = dV * (-0.5 * V + 0.5)
 
+    # axes for volume and projector
     xx = jnp.linspace(0., 1., X, endpoint=True) * width_img + O_X
     yy = jnp.linspace(0., 1., Y, endpoint=True) * height_img + O_Y
     uu = jnp.linspace(0., 1., U, endpoint=True) * width_proj + O_U
     vv = jnp.linspace(0., 1., V, endpoint=True) * height_proj + O_V
 
-
+    # map over all pixels to get one projection
     get_proj = multi_vmap(
-        get_ray_2d,
+        _get_ray_2d,
         (
             (None, None, 0, None, None, None, None, None), 
             (None, None, None, 1, None, None, None, None)
@@ -153,7 +121,7 @@ def get_proj_2d(vol, theta, dX, U, dU, V, dV, S, D):
     )
     proj = get_proj(vol, theta, uu[:, None], vv[None], xx, yy, S, D)
 
-    # get_row = jax.vmap(get_ray_2d, (None, None, 0, None, None, None), 0)
+    # get_row = jax.vmap(_get_ray_2d, (None, None, 0, None, None, None), 0)
     # proj = jax.lax.map(
     #     lambda v: get_row(vol, theta, uu, v, xx, yy),
     #     vv
@@ -163,7 +131,7 @@ def get_proj_2d(vol, theta, dX, U, dU, V, dV, S, D):
 
 
 @partial(jax.jit, static_argnames=("U", "V"))
-def get_projs_2d(vol, thetas, dX, U, dU, V, dV, S, D):
+def get_fp(vol, thetas, dX, U, dU, V, dV, S, D):
     
     # projs = jax.vmap(
     #     get_proj_2d, 
@@ -176,8 +144,9 @@ def get_projs_2d(vol, thetas, dX, U, dU, V, dV, S, D):
     #     thetas
     # )
 
-    projs = map(
-        lambda theta: get_proj_2d(vol, theta, dX, U, dU, V, dV, S, D),
+    # map over angles to get full FP
+    projs = jaxmap(
+        lambda theta: _get_fp_angle(vol, theta, dX, U, dU, V, dV, S, D),
         thetas,
         unroll=1
     )

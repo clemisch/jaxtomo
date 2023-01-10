@@ -1,5 +1,8 @@
 import os
+
 import jax
+import jax.scipy as jsp
+
 
 
 def set_cuda_device(n):
@@ -31,3 +34,29 @@ def multi_vmap(fun, in_axes, out_axes):
     for inax, outax in zip(in_axes, out_axes):
         batched_fun = jax.vmap(batched_fun, inax, outax)
     return batched_fun
+
+
+def interp2d(x, y, xlims, ylims, vals):
+    x_lo, x_hi = xlims
+    y_lo, y_hi = ylims
+    n_x, n_y = vals.shape
+
+    # transform x,y into pixel values
+    x = (x - x_lo) * (n_x - 1.) / (x_hi - x_lo)
+    y = (y - y_lo) * (n_y - 1.) / (y_hi - y_lo)
+
+    vals_interp = jsp.ndimage.map_coordinates(
+        vals, 
+        (x, y), 
+        order=1,
+        mode="constant", 
+        cval=0.0,
+    )
+    return vals_interp
+
+
+def jaxmap(f, xs, unroll=1):
+    """ Redefine jax.lax.map to get unroll support """
+    g = lambda _, x: ((), f(x))
+    _, ys = jax.lax.scan(g, (), xs, unroll=unroll)
+    return ys

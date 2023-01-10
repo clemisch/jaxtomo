@@ -3,39 +3,10 @@ import jax.numpy as jnp
 import jax.scipy as jsp
 from functools import partial
 
-from .util import multi_vmap
+from .util import multi_vmap, interp2d
 
 
-print("UPDATED FAN BP")
-
-
-# redefine jax.lax.map to get unroll support
-def map(f, xs, unroll=1):
-  g = lambda _, x: ((), f(x))
-  _, ys = jax.lax.scan(g, (), xs, unroll=unroll)
-  return ys
-
-
-def interp2d(x, y, xlim, ylim, vals):
-    x_lo, x_hi = xlim
-    y_lo, y_hi = ylim
-    n_x, n_y = vals.shape
-
-    # transform x,y into pixel values
-    x = (x - x_lo) * (n_x - 1.) / (x_hi - x_lo)
-    y = (y - y_lo) * (n_y - 1.) / (y_hi - y_lo)
-
-    vals_interp = jsp.ndimage.map_coordinates(
-        vals, 
-        (x, y), 
-        order=1,
-        mode="constant", 
-        cval=0.0,
-    )
-    return vals_interp
-
-
-def get_voxel(proj, theta, x, y, z, uu, vv, S, D):
+def _get_voxel(proj, theta, x, y, z, uu, vv, S, D):
     x_ = x * jnp.cos(theta) + z * jnp.sin(theta)
     z_ = z * jnp.cos(theta) - x * jnp.sin(theta)
     u = x_ * (D - S) / (z_ - S)
@@ -55,7 +26,7 @@ def get_voxel(proj, theta, x, y, z, uu, vv, S, D):
 
 
 @partial(jax.jit, static_argnames=("X", "Y"))
-def get_bp_once(proj, theta, dU, dV, X, Y, dX, S, D):
+def _get_bp_angle(proj, theta, dU, dV, X, Y, dX, S, D):
     dY = dX
     V = proj.shape[0]
     U = proj.shape[1]
@@ -79,7 +50,7 @@ def get_bp_once(proj, theta, dU, dV, X, Y, dX, S, D):
 
 
     get_voxels = multi_vmap(
-        get_voxel,
+        _get_voxel,
         (
             (None, None, 0   , None, None, None, None, None, None),
             (None, None, None, 1   , None, None, None, None, None),
@@ -105,7 +76,7 @@ def get_bp(projs, thetas, dU, dV, X, Y, dX, S, D):
 
     def body_fun(carry, elem):
         proj, theta = elem
-        bp = get_bp_once(proj, theta, dU, dV, X, Y, dX, S, D)
+        bp = _get_bp_angle(proj, theta, dU, dV, X, Y, dX, S, D)
         carry = carry + bp
         return carry, None
 
