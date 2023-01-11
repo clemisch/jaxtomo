@@ -68,7 +68,7 @@ def roundmask(ny, nx):
         np.linspace(-1, 1, ny, endpoint=True),
         np.linspace(-1, 1, nx, endpoint=True),
         indexing="ij",
-        # sparse=True
+        sparse=True
     )
     r2 = yy**2 + xx**2
     mask = np.where(r2 < 1., 1., 0.)
