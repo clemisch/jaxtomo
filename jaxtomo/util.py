@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import jax
 import jax.scipy as jsp
 
@@ -60,3 +61,16 @@ def jaxmap(f, xs, unroll=1):
     g = lambda _, x: ((), f(x))
     _, ys = jax.lax.scan(g, (), xs, unroll=unroll)
     return ys
+
+
+def roundmask(ny, nx):
+    yy, xx = np.meshgrid(
+        np.linspace(-1, 1, ny, endpoint=True),
+        np.linspace(-1, 1, nx, endpoint=True),
+        indexing="ij",
+        # sparse=True
+    )
+    r2 = yy**2 + xx**2
+    mask = np.where(r2 < 1., 1., 0.)
+
+    return mask
