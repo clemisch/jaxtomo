@@ -18,9 +18,6 @@ def _get_voxel(proj, theta, x, y, z, uu, vv, S, D):
         proj
     ).squeeze()
 
-    # weight with length through voxel
-    # val = val * jnp.abs(jnp.cos(theta))
-
     return val
 
 

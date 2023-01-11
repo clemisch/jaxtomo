@@ -15,9 +15,6 @@ def _get_voxel(proj, theta, x, y, z, uu, vv):
         proj
     ).squeeze()
 
-    # weight with length through voxel
-    # val = val * jnp.abs(jnp.cos(theta))
-
     return val
 
 
@@ -44,7 +41,6 @@ def _get_bp_angle(proj, theta, dU, dV, X, Y, dX):
     yy = jnp.linspace(0., 1., Y, endpoint=True) * height_img + O_Y
     uu = jnp.linspace(0., 1., U, endpoint=True) * width_proj + O_U
     vv = jnp.linspace(0., 1., V, endpoint=True) * height_proj + O_V
-
 
     get_voxels = multi_vmap(
         _get_voxel,

@@ -17,24 +17,8 @@ def _get_ray_2d(vol, theta, u, v, xx, yy):
         )
         return val
 
-
-    use_vmap = True
-
-    if use_vmap:
-        points = jax.vmap(get_point, (0, 1), 0)(xx, vol)
-        ray = jnp.sum(points)
-    else:
-        def body_fun(carry, x):
-            z, img_slice = x
-            val = get_point(z, img_slice)[0]
-            carry = carry + val
-            return carry, None
-
-        ray, _ = jax.lax.scan(
-            body_fun, 0., 
-            (xx, vol.transpose((1, 0, 2))),
-            unroll=16
-        )
+    points = jax.vmap(get_point, (0, 1), 0)(xx, vol)
+    ray = jnp.sum(points)
 
     # weight with length through voxel
     ray = ray / jnp.cos(theta)
@@ -87,7 +71,6 @@ def _get_fp_angle(vol, theta, dX, U, dU, V, dV):
     uu = jnp.linspace(0., 1., U, endpoint=True) * width_proj + O_U
     vv = jnp.linspace(0., 1., V, endpoint=True) * height_proj + O_V
 
-
     get_proj = multi_vmap(
         _get_ray_2d,
         (   
@@ -98,29 +81,13 @@ def _get_fp_angle(vol, theta, dX, U, dU, V, dV):
     )
     proj = get_proj(vol, theta, uu, vv, xx, yy)
 
-    # get_row = jax.vmap(get_ray_2d, (None, None, 0, None, None, None), 0)
-    # proj = jax.lax.map(
-    #     lambda v: get_row(vol, theta, uu, v, xx, yy),
-    #     vv
-    # )
-
     return proj
 
 
 @partial(jax.jit, static_argnames=("U", "V"))
 def get_fp(vol, thetas, dX, U, dU, V, dV):
-    
-    # projs = jax.vmap(
-    #     get_proj_2d, 
-    #     (None, 0, None, None, None, None, None),
-    #      0
-    # )(vol, thetas, dX, U, dU, V, dV)
 
-    # projs = jax.lax.map(
-    #     lambda theta: get_proj_2d(vol, theta, dX, U, dU, V, dV),
-    #     thetas
-    # )
-
+    # map over angles to get full FP
     projs = map(
         lambda theta: _get_fp_angle(vol, theta, dX, U, dU, V, dV),
         thetas,

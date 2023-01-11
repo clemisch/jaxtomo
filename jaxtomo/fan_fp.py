@@ -25,7 +25,7 @@ def _get_ray_2d(vol, theta, u, v, xx, yy, S, D):
             (u / (D - S), -1., jnp.cos(theta), jnp.sin(theta)),
             dtype=vol.dtype
         ).reshape(2, 2)
-        b = jnp.array(((u * S) / (D - S), z), dtype=vol.dtype)
+        b = jnp.array((u * S / (D - S), z), dtype=vol.dtype)
 
         z_, x_ = _solve_2d(A, b)
         x = x_ * jnp.cos(theta) - z_ * jnp.sin(theta)
@@ -38,25 +38,8 @@ def _get_ray_2d(vol, theta, u, v, xx, yy, S, D):
         )
         return val
 
-
-    use_vmap = True
-
-    if use_vmap:
-        # points = jax.vmap(get_point)(xx, vol.transpose((1, 0, 2)))
-        points = jax.vmap(get_point, (0, 1), 0)(xx, vol)
-        ray = jnp.sum(points)
-    else:
-        def body_fun(carry, x):
-            z, img_slice = x
-            val = get_point(z, img_slice)[0]
-            carry = carry + val
-            return carry, None
-
-        ray, _ = jax.lax.scan(
-            body_fun, 0., 
-            (xx, vol.transpose((1, 0, 2))),
-            unroll=16
-        )
+    points = jax.vmap(get_point, (0, 1), 0)(xx, vol)
+    ray = jnp.sum(points)
 
     # weight with length through voxel
     beta = jnp.arctan2(u, D - S)
@@ -122,29 +105,12 @@ def _get_fp_angle(vol, theta, dX, U, dU, V, dV, S, D):
     )
     proj = get_proj(vol, theta, uu, vv, xx, yy, S, D)
 
-    # get_row = jax.vmap(_get_ray_2d, (None, None, 0, None, None, None), 0)
-    # proj = jax.lax.map(
-    #     lambda v: get_row(vol, theta, uu, v, xx, yy),
-    #     vv
-    # )
-
     return proj
 
 
 @partial(jax.jit, static_argnames=("U", "V"))
 def get_fp(vol, thetas, dX, U, dU, V, dV, S, D):
     
-    # projs = jax.vmap(
-    #     get_proj_2d, 
-    #     (None, 0, None, None, None, None, None),
-    #      0
-    # )(vol, thetas, dX, U, dU, V, dV)
-
-    # projs = jax.lax.map(
-    #     lambda theta: get_proj_2d(vol, theta, dX, U, dU, V, dV),
-    #     thetas
-    # )
-
     # map over angles to get full FP
     projs = jaxmap(
         lambda theta: _get_fp_angle(vol, theta, dX, U, dU, V, dV, S, D),
