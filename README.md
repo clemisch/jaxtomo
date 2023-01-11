@@ -20,6 +20,7 @@ This is a personal project and very work-in-progress. It is meant as a learning 
 
 * Cone beam
 * Curved detector
+* Different voxel basis functions [[1]](https://pubmed.ncbi.nlm.nih.gov/17278818/),[[2]](https://www.researchgate.net/publication/263921475_Projector_and_Backprojector_for_Iterative_CT_Reconstruction_with_Blobs_using_CUDA)
 
 ## Proof of concept
 
