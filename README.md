@@ -2,7 +2,7 @@
 
 jaxtomo implements tomographic projectors with [JAX](https://github.com/google/jax). 
 
-They are implemented purely in Python, which makes the code readable and hackable. Because JAX offers just-in-time compilation to GPU, the projectors are reasonably fast. They don't use texture memory and are therefore slower than optimized implementations such as [torch-radon](https://github.com/matteo-ronchetti/torch-radon).
+They are implemented purely in Python, which makes the code readable and hackable. Because JAX offers just-in-time compilation to GPU, the projectors are reasonably fast. They don't use texture memory and are slower than optimized implementations such as [torch-radon](https://github.com/matteo-ronchetti/torch-radon).
 
 ## Disclaimer
 
