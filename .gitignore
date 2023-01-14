@@ -2,3 +2,4 @@
 __pycache__
 build
 jaxtomo.egg-info
+.jaxtomo.sublime-*
