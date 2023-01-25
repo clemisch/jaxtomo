@@ -6,6 +6,7 @@ from .util import multi_vmap, interp2d, jaxmap
 
 
 def _solve_2d(A, b):
+    """ Solve `A.dot(x) = b` for x """
     det = A[0, 0] * A[1, 1] - A[0, 1] * A[1, 0]
     A_inv = jnp.array(
         (A[1, 1], -A[0, 1], -A[1, 0], A[0, 0]), 
@@ -18,19 +19,38 @@ def _solve_2d(A, b):
 
 
 def _get_ray_2d(vol, theta, u, v, xx, yy, zz, S, D):
+    """\
+    Get scalar value of single projected ray from source to pixel
+    """
     u = jnp.squeeze(u)
     v = jnp.squeeze(v)
 
     def get_point(z, img_slice):
-        A = jnp.array(
-            (u / (D - S), -1., jnp.cos(theta), jnp.sin(theta)),
+        # describe both lines with linear equation
+        # (I) : line from source to pixel
+        # (II): line along z (in rotated volume coordinate system)
+        A = jnp.array((
+                u / (D - S)   , -1.           , # (I)
+                jnp.cos(theta), jnp.sin(theta), # (II)
+            ),
             dtype=vol.dtype
         ).reshape(2, 2)
-        b = jnp.array((u * S / (D - S), z), dtype=vol.dtype)
+        b = jnp.array((
+                u * S / (D - S), # (I)
+                z                # (II)
+            ), 
+            dtype=vol.dtype
+        )
 
+        # find solution == intersection of lines
+        # z_, x_ are in global coordinate system
         z_, x_ = _solve_2d(A, b)
+
+        # find `x` location to sample from
+        # z, x are in rotated volume coordinate system
         x = x_ * jnp.cos(theta) - z_ * jnp.sin(theta)
 
+        # bilinear interpolation of slice at ray crossing
         val = interp2d(
             v, x,
             (yy[0], yy[-1]), 
@@ -39,7 +59,9 @@ def _get_ray_2d(vol, theta, u, v, xx, yy, zz, S, D):
         )
         return val
 
-    # content of `zz` depends on principal direction
+    # get all intersections by mapping over image slices along principal direction
+    # orientation of `vol` & content of `zz` depends on principal direction
+    # line integral is sum over all interactions
     points = jax.vmap(get_point, (0, 1), 0)(zz, vol)
     ray = jnp.sum(points)
 
@@ -51,7 +73,6 @@ def _get_ray_2d(vol, theta, u, v, xx, yy, zz, S, D):
 
 
 
-# @partial(jax.jit, static_argnames=("U", "V", "princ_dir"))
 @partial(jax.jit, static_argnames=("U", "V"))
 def _get_fp_angle(vol, theta, dX, U, dU, V, dV, S, D, princ_dir):
     dY = dX
