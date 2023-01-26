@@ -6,15 +6,15 @@ from .util import multi_vmap, interp2d, jaxmap
 
 
 def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
-    # u = jnp.squeeze(u)
-    # v = jnp.squeeze(v)
-
+    # pixel coords
     Dx = d * jnp.cos(theta) - u * jnp.sin(theta)
     Dy = d * jnp.sin(theta) + u * jnp.cos(theta)
 
+    # source coords
     Sx = -s * jnp.cos(theta)
     Sy = -s * jnp.sin(theta)
 
+    # ray from source to pixel
     Rx = Dx - Sx
     Ry = Dy - Sy
 
