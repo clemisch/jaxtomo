@@ -18,9 +18,9 @@ img = nd.zoom(img, vol_sh_x / img.shape[0], order=1)
 vol = img[None].repeat(nslices, 0)
 vol = jax.device_put(vol)
 
-z_source = -1000
+z_source = 1000
 z_det = 1000
-M = (z_det - z_source) / abs(z_source)
+M = (z_det + z_source) / abs(z_source)
 
 n_angles = vol_sh_x * 2
 angles = linspace(0, 2 * pi, n_angles, False)
