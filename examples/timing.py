@@ -1,4 +1,4 @@
-import numpy as np
+import os
 import scipy.ndimage as nd
 import timeit
 import jax
@@ -7,9 +7,14 @@ import jax.numpy as jnp
 from jaxtomo import fan_fp as P_fp
 from jaxtomo import fan_bp as P_bp
 
+
+
 from jaxtomo import util
-util.set_preallocation(True)
-util.set_cuda_device(2)
+GPU = int(os.environ.get("GPU", 0))
+PREALLOC = bool(os.environ.get("PREALLOC", 0) != "0")
+print(f"GPU conf: GPU #{GPU}, prealloc={PREALLOC}")
+util.set_preallocation(PREALLOC)
+util.set_cuda_device(GPU)
 
 
 def get_timing_fp(sh_vol, sh_proj):
