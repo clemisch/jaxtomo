@@ -78,13 +78,13 @@ def get_timing_bp(sh_vol, sh_proj):
 
 
 configs = [
-    ((128,) * 3, (256, 8, 128)),
+    # ((128,) * 3, (256, 8, 128)),
     # ((256,) * 3, (512, 8, 256)),
     # ((256,) * 3, (512, 16, 256)),
     # ((256,) * 3, (512, 32, 256)),
     # ((512,) * 3, (1024, 8, 512)),
-    ((48, 800, 800), (2400, 32, 672)),
-    # ((800, 800, 800), (2400, 32, 672)),
+    # ((48, 800, 800), (2400, 32, 672)),
+    ((800, 800, 800), (2400, 32, 672)),
 ]
 
 print("*** FP ***")
@@ -100,13 +100,15 @@ for config in configs:
 
 
 
+exit(0)
 
-# print("*** BP ***")
-# for config in configs:
-#     sh_vol, sh_proj = config
-#     dt = get_timing_bp(sh_vol, sh_proj)
 
-#     nvoxels = sh_vol[0] * sh_vol[1] * sh_vol[2]
-#     dt_voxel = dt / nvoxels
+print("*** BP ***")
+for config in configs:
+    sh_vol, sh_proj = config
+    dt = get_timing_bp(sh_vol, sh_proj)
 
-#     print(f"{str(sh_proj):15} -> {str(sh_vol):15} : {dt * 1e3:5.0f} ms , {dt_voxel * 1e6:5.2f} µs per voxel")
+    nvoxels = sh_vol[0] * sh_vol[1] * sh_vol[2]
+    dt_voxel = dt / nvoxels
+
+    print(f"{str(sh_proj):15} -> {str(sh_vol):15} : {dt * 1e3:5.0f} ms , {dt_voxel * 1e6:5.2f} µs per voxel")

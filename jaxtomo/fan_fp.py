@@ -80,7 +80,7 @@ def _get_ray_scan(vol, theta, u, v, xx, yy, zz, s, d):
         body_fun,
         0.0,
         (xx, vol.transpose(1, 0, 2)),
-        unroll=1
+        unroll=16
     )
 
     # weight with length through voxel
