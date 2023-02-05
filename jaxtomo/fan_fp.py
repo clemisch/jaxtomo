@@ -43,7 +43,8 @@ def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
     return ray
 
 
-def _get_ray_scan(vol, theta, u, v, xx, yy, zz, s, d):
+
+def _get_ray_scan(vol, theta, u, v, xx, yy, zz, s, d, dX, dY):
     # pixel coords
     Dx = d * jnp.cos(theta) - u * jnp.sin(theta)
     Dy = d * jnp.sin(theta) + u * jnp.cos(theta)
@@ -56,12 +57,24 @@ def _get_ray_scan(vol, theta, u, v, xx, yy, zz, s, d):
     Rx = Dx - Sx
     Ry = Dy - Sy
 
-    # worker function to get interpolated value of `img_slice` at `x`
-    def get_point(x, img_slice):
-        dx = x - Sx
-        dy = dx / Rx * Ry
-        y = Sy + dy
+    # vector between two voxel slices
+    rx = dX
+    ry = rx / Rx * Ry
 
+    # y of first slice
+    x0 = xx[0]
+    y0 = x0 / Rx * Ry
+
+    # y index & remainder of first slice
+    i_y_0, rem_y_0 = jnp.divmod(y0 - yy[0], dX)
+
+    # z index & remainder are constant, because fan beam
+    i_z, rem_z = jnp.divmod(v - zz[0], dY)
+
+
+    # worker function to get interpolated value of `img_slice` at index `i`
+    def get_point(i, img_slice):
+        y = y0 + i * ry
         val = interp2d(
             v, y,
             (zz[0], zz[-1]), 
@@ -71,15 +84,15 @@ def _get_ray_scan(vol, theta, u, v, xx, yy, zz, s, d):
         return val
 
     def body_fun(carry, elem):
-        x, sl = elem
-        val = get_point(x, sl)
+        i, sl = elem
+        val = get_point(i, sl)
         carry = carry + val
         return carry, None
 
     ray, _ = jax.lax.scan(
         body_fun,
         0.0,
-        (xx, vol.transpose(1, 0, 2)),
+        (jnp.arange(vol.shape[1]), vol.transpose(1, 0, 2)),
         unroll=16
     )
 
@@ -133,7 +146,7 @@ def _get_fp_angle(vol, theta, dX, U, dU, V, dV, s, d, princ_dir, is_scan):
     )
 
     if is_scan:
-        ray_fun = _get_ray_scan
+        ray_fun = lambda *args: _get_ray_scan(*args, dX=dX, dY=dX)
     else:
         ray_fun = _get_ray
 
