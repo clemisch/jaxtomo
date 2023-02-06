@@ -44,9 +44,8 @@ def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
     ray = jnp.sum(points)
 
     # weight with length through voxel
-    # TODO: consider Rz
-    angle_tot = jnp.arctan2(Ry, Rx)
-    ray = ray / jnp.cos(angle_tot)
+    raylen = Rx / jnp.sqrt(Rx**2 + Ry**2 + Rz**2)
+    ray = ray / raylen
 
     return ray
 
