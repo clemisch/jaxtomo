@@ -4,6 +4,7 @@ from . import fan_fp_bp
 
 from . import cone_bp
 from . import cone_fp
+from . import cone_fp_bp
 
 from . import parallel_bp
 from . import parallel_fp
