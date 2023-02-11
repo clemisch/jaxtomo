@@ -8,9 +8,8 @@ from jaxtomo import cone_bp as P_bp
 from jaxtomo import proj_filter
 from jaxtomo import util
 
-util.set_preallocation(False)
-util.set_cuda_device(1)
-# util.set_platform("cpu")
+util.set_preallocation(True)
+util.set_cuda_device(0,1)
 
 vol_sh_x = 256
 nslices = vol_sh_x
@@ -47,7 +46,7 @@ nrows = nslices
 px_height = M
 vol_sh_y = nslices
 
-proj = P_fp.get_fp(
+proj = P_fp.get_fp_pmap(
     vol, angles, 
     vx_size, 
     ncols, px_width, 
