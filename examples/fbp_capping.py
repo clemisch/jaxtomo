@@ -54,7 +54,17 @@ fbp = P_bp.get_bp(
 fbp = fbp / n_angles
 
 
-figure()
-plot(vol[nslices//2, vol_sh_x//2])
-plot(fbp[nslices//2, vol_sh_x//2])
-show()
+figure(figsize=(12, 4))
+subplot(131)
+imshow(vol[nslices//2], vmin=0, vmax=1)
+axhline(vol_sh_x//2, color="blue")
+
+subplot(132)
+imshow(fbp[nslices//2], vmin=0, vmax=1)
+axhline(vol_sh_x//2, color="orange")
+
+subplot(133)
+plot(vol[nslices//2, vol_sh_x//2], label="Ground Truth")
+plot(fbp[nslices//2, vol_sh_x//2], label="FBP")
+legend()
+tight_layout()
