@@ -6,9 +6,15 @@ import jax.scipy as jsp
 
 
 
-def set_cuda_device(n):
+def set_cuda_device(*args):
+    assert all([isinstance(a, int) for a in args])
+
+    devices = ",".join(map(str, args))
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(n)
+    os.environ["CUDA_VISIBLE_DEVICES"] = devices
+
+    print("CUDA_DEVICE_ORDER=PCI_BUS_ID")
+    print(f"CUDA_VISIBLE_DEVICES={devices}")
 
 
 def set_platform(platform):
