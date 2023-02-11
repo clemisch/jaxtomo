@@ -88,10 +88,33 @@ def _get_fp_angle(vol, theta, dX, U, dU, V, dV):
 def get_fp(vol, thetas, dX, U, dU, V, dV):
 
     # map over angles to get full FP
-    projs = map(
+    projs = jaxmap(
         lambda theta: _get_fp_angle(vol, theta, dX, U, dU, V, dV),
         thetas,
         unroll=1
     )
 
     return projs
+
+    
+# TODO: change to "static_argnames" once JAX supports it
+@partial(
+    jax.pmap, 
+    in_axes=(None, 0, None, None, None, None, None),
+    static_broadcasted_argnums=(3, 5)
+)
+def _get_fp_pmap(vol, thetas, dX, U, dU, V, dV):
+    proj = get_fp(vol, thetas, dX, U, dU, V, dV)
+    return proj
+
+
+def get_fp_pmap(vol, thetas, dX, U, dU, V, dV):
+    nangles = thetas.shape[0]
+    ndevices = jax.device_count()
+    assert nangles % ndevices == 0
+
+    thetas = thetas.reshape(ndevices, -1)
+    proj = _get_fp_pmap(vol, thetas, dX, U, dU, V, dV)
+    proj = proj.reshape(nangles, V, U)
+
+    return proj

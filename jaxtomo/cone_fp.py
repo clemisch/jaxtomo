@@ -130,3 +130,26 @@ def get_fp(vol, thetas, dX, U, dU, V, dV, s, d):
     projs = jaxmap(mapfun, (thetas, princ_dirs), unroll=1)
 
     return projs
+
+
+# TODO: change to "static_argnames" once JAX supports it
+@partial(
+    jax.pmap, 
+    in_axes=(None, 0, None, None, None, None, None, None, None),
+    static_broadcasted_argnums=(3, 5)
+)
+def _get_fp_pmap(vol, thetas, dX, U, dU, V, dV, s, d):
+    proj = get_fp(vol, thetas, dX, U, dU, V, dV, s, d)
+    return proj
+
+
+def get_fp_pmap(vol, thetas, dX, U, dU, V, dV, s, d):
+    nangles = thetas.shape[0]
+    ndevices = jax.device_count()
+    assert nangles % ndevices == 0
+
+    thetas = thetas.reshape(ndevices, -1)
+    proj = _get_fp_pmap(vol, thetas, dX, U, dU, V, dV, s, d)
+    proj = proj.reshape(nangles, V, U)
+
+    return proj
