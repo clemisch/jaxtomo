@@ -12,7 +12,8 @@ from jaxtomo import cone_fp
 from jaxtomo import util
 GPU = int(os.environ.get("GPU", 0))
 PREALLOC = bool(os.environ.get("PREALLOC", 0) != "0")
-print(f"GPU conf: GPU #{GPU}, prealloc={PREALLOC}")
+PMAP = bool(os.environ.get("PMAP", 0) != "0")
+print(f"GPU conf: GPU #{GPU}, prealloc={PREALLOC}, pmap={PMAP}")
 util.set_preallocation(PREALLOC)
 util.set_cuda_device(GPU)
 
@@ -29,8 +30,13 @@ def get_timing_fp_fan(sh_vol, sh_proj):
     angles = jnp.linspace(0., 2 * jnp.pi, nangles, False)
     vol = jnp.ones(sh_vol, dtype="float32")
 
+    if PMAP:
+        fp_fun = fan_fp.get_fp_pmap
+    else:
+        fp_fun = fan_fp.get_fp
+
     def get_proj():
-        projs = fan_fp.get_fp(
+        projs = fp_fun(
             vol, angles, 
             vx_size, 
             ncols, px_width, 
@@ -57,8 +63,13 @@ def get_timing_fp_cone(sh_vol, sh_proj):
     angles = jnp.linspace(0., 2 * jnp.pi, nangles, False)
     vol = jnp.ones(sh_vol, dtype="float32")
 
+    if PMAP:
+        fp_fun = cone_fp.get_fp_pmap
+    else:
+        fp_fun = cone_fp.get_fp
+
     def get_proj():
-        projs = cone_fp.get_fp(
+        projs = fp_fun(
             vol, angles, 
             vx_size, 
             ncols, px_width, 
