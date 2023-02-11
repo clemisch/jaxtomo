@@ -95,10 +95,10 @@ def _get_fp_angle(vol, theta, dX, U, dU, V, dV, s, d, princ_dir):
     get_proj = multi_vmap(
         _get_ray,
         (
-            (None, None, 0, None, None, None, None, None, None), 
-            (None, None, None, 0, None, None, None, None, None)
+            (None, None, None, 0   , None, None, None, None, None), 
+            (None, None, 0   , None, None, None, None, None, None)
         ),
-        (0, 0)
+        (0, 1)
     )
     proj = get_proj(vol, theta, uu, vv, xx, yy, zz, s, d)
 
