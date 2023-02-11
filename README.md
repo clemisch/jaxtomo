@@ -12,13 +12,13 @@ This is a personal project and very work-in-progress. It is meant as a learning 
 
 * Parallel beam
 * Fan beam
+* Cone Beam
 * FBP
 * ... all with a flat detector
 * FP and BP registered as respective transpose for autodiff with JAX
 
 ## Todo
 
-* Cone beam
 * Valid FBP for large fan/cone angles
 * Other FP methods (Siddon, Footprint, ...)
 * Curved detector
