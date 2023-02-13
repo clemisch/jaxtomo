@@ -16,6 +16,7 @@ This is a personal project and very work-in-progress. It is meant as a learning 
 * FBP
 * ... all with a flat detector
 * FP and BP registered as respective transpose for autodiff with JAX
+* `jax.pmap` for multi-GPU speedup
 
 ## Todo
 
@@ -23,7 +24,6 @@ This is a personal project and very work-in-progress. It is meant as a learning 
 * Other FP methods (Siddon, Footprint, ...)
 * Curved detector
 * Different voxel basis functions [[1]](https://pubmed.ncbi.nlm.nih.gov/17278818/),[[2]](https://www.researchgate.net/publication/263921475_Projector_and_Backprojector_for_Iterative_CT_Reconstruction_with_Blobs_using_CUDA)
-* `jax.pmap` for multi-GPU speedup
 
 ## Proof of concept
 
