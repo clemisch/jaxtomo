@@ -73,3 +73,33 @@ def get_bp(projs, thetas, dU, dV, X, Y, dX):
     )
 
     return vol
+
+
+
+
+# TODO: change to "static_argnames" once JAX supports it
+@partial(
+    jax.pmap, 
+    in_axes=(0, 0, None, None, None, None, None),
+    static_broadcasted_argnums=(4, 5)
+)
+def _get_bp_pmap(projs, thetas, dU, dV, X, Z, dX):
+    vol = get_bp(projs, thetas, dU, dV, X, Z, dX)
+    return vol
+
+
+# JAX complains about jit of pmap, but it _is_ faster than without jit in this
+# case
+@partial(jax.jit, static_argnames=("X", "Z"))
+def get_bp_pmap(projs, thetas, dU, dV, X, Z, dX):
+    nangles = thetas.shape[0]
+    ndevices = jax.device_count()
+    assert nangles % ndevices == 0
+
+    projs = projs.reshape(ndevices, -1, *projs.shape[1:])
+    thetas = thetas.reshape(ndevices, -1)
+
+    vol = _get_bp_pmap(projs, thetas, dU, dV, X, Z, dX)
+    vol = vol.sum(0)
+
+    return vol
