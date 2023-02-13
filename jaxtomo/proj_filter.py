@@ -1,6 +1,7 @@
 import numpy as np
 import jax
 import jax.numpy as jnp
+from functools import partial
 
 
 def gen_fbp_weights(ncols):
@@ -22,3 +23,22 @@ def proj_filter(proj, weights):
     result = jnp.fft.irfft(proj_fft, axis=-1)
     
     return result[..., pad_width:-pad_width]
+
+
+@partial(jax.pmap, in_axes=(0, None))
+def _proj_filter_pmap(proj, weights):
+    proj_f = proj_filter(proj, weights)
+    return proj_f
+
+
+@jax.jit
+def proj_filter_pmap(proj, weights):
+    nangles = proj.shape[0]
+    ndevices = jax.device_count()
+    assert nangles % ndevices == 0
+
+    proj = proj.reshape(ndevices, -1, *proj.shape[1:])
+    proj_f = _proj_filter_pmap(proj, weights)
+    proj_f = proj_f.reshape(nangles, *proj_f.shape[-2:])
+
+    return proj_f
