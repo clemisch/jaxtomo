@@ -143,6 +143,7 @@ def _get_fp_pmap(vol, thetas, dX, U, dU, V, dV, s, d):
     return proj
 
 
+@partial(jax.jit, static_argnames=("U", "V"))
 def get_fp_pmap(vol, thetas, dX, U, dU, V, dV, s, d):
     nangles = thetas.shape[0]
     ndevices = jax.device_count()
