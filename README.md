@@ -31,5 +31,5 @@ This is a personal project and very work-in-progress. It is meant as a learning 
 ![image](https://user-images.githubusercontent.com/5190547/215475790-4551313a-76fc-409c-9b41-6417b61bf69b.png)
 
 ### Parallel, fan, and cone projector
-![image](https://user-images.githubusercontent.com/5190547/218251797-d3c76b1c-a5a4-48fd-aa15-bc31dd0f0e92.png)
+![image](https://user-images.githubusercontent.com/5190547/220201015-89feac80-b14e-4899-9af2-2be3c35ce14f.png)
 
