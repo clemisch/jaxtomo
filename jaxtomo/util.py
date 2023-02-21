@@ -78,6 +78,6 @@ def roundmask(ny, nx):
         sparse=True
     )
     r2 = yy**2 + xx**2
-    mask = np.where(r2 < 1., 1., 0.)
+    mask = np.where(r2 > 1., 0., 1.)
 
     return mask
