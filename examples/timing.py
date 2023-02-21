@@ -5,17 +5,22 @@ import jax.numpy as jnp
 from jaxtomo import cone_fp, cone_bp
 from jaxtomo import util
 
-GPU = eval(os.environ.get("GPU", (0,)))
+GPU      = eval(os.environ.get("GPU", "None"))
 PREALLOC = bool(os.environ.get("PREALLOC", "0") != "0")
-PMAP = bool(os.environ.get("PMAP", "0") != "0")
-FP = bool(os.environ.get("FP", "1") != "0")
-BP = bool(os.environ.get("BP", "1") != "0")
-SIZE = int(os.environ.get("SIZE", "0"))
+PMAP     = bool(os.environ.get("PMAP", "0") != "0")
+FP       = bool(os.environ.get("FP", "1") != "0")
+BP       = bool(os.environ.get("BP", "1") != "0")
+SIZE     = int (os.environ.get("SIZE", "0"))
 
 print(f"GPU conf: GPU #{GPU}, prealloc={PREALLOC}, pmap={PMAP}, FP={FP}, BP={BP}")
 
-util.set_preallocation(PREALLOC)
-util.set_cuda_device(*GPU, verbose=False)
+if GPU is None:
+    util.set_platform("cpu")
+else:
+    if isinstance(GPU, int): GPU = (GPU,)
+    util.set_platform("gpu")
+    util.set_preallocation(PREALLOC)
+    util.set_cuda_device(*GPU, verbose=False)
 
 
 def get_timing_fp(sh_vol, sh_proj):
@@ -110,9 +115,13 @@ if FP:
         nrays = sh_proj[0] * sh_proj[1] * sh_proj[2]
         dt_ray = dt / nrays
 
+        GRay = nrays / 1000.**3
+        Grays = GRay / dt
+
         print((
-            f"{str(sh_vol):15} -> {str(sh_proj):15} : {dt * 1e3:5.0f} ms ,"
-            f"{dt_ray * 1e6:5.2f} µs per pixel"
+            f"{str(sh_vol):15} -> {str(sh_proj):15} : {dt * 1e3:5.0f} ms , "
+            f"{dt_ray * 1e6:5.2f} µs per pixel , "
+            f"{Grays:2.3f} GRays/s"
         ))
 
 
@@ -125,7 +134,11 @@ if BP:
         nvoxels = sh_vol[0] * sh_vol[1] * sh_vol[2]
         dt_voxel = dt / nvoxels
 
+        GRay = nvoxels / 1000.**3
+        Grays = GRay / dt
+
         print((
             f"{str(sh_proj):15} -> {str(sh_vol):15} : {dt * 1e3:5.0f} ms , "
-            f"{dt_voxel * 1e6:5.2f} µs per voxel"
+            f"{dt_voxel * 1e6:5.2f} µs per voxel , "
+            f"{Grays:2.3f} GRays/s"
         ))
