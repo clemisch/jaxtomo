@@ -20,7 +20,7 @@ This is a personal project and very work-in-progress. It is meant as a learning 
 
 ## Todo
 
-* Valid FBP for large fan/cone angles
+* Valid FBP for large fan/cone angles (atm we just do Ramlak filter + BP)
 * Other FP methods (Siddon, Footprint, ...)
 * Curved detector
 * Different voxel basis functions [[1]](https://pubmed.ncbi.nlm.nih.gov/17278818/),[[2]](https://www.researchgate.net/publication/263921475_Projector_and_Backprojector_for_Iterative_CT_Reconstruction_with_Blobs_using_CUDA)
