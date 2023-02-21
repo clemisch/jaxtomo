@@ -8,7 +8,7 @@ from jaxtomo import util
 util.set_preallocation(True)
 util.set_cuda_device(0, 1)
 
-vol_sh_x = 256
+vol_sh_x = 128
 nslices = vol_sh_x
 
 vol = zeros((vol_sh_x, vol_sh_x, vol_sh_x), dtype="float32")
@@ -32,6 +32,7 @@ nrows = nslices
 px_height = M
 vol_sh_y = nslices
 
+print("PARALLEL")
 proj_par = parallel_fp.get_fp_pmap(
     vol, angles, 
     vx_size, 
@@ -39,6 +40,7 @@ proj_par = parallel_fp.get_fp_pmap(
     nrows, 1.,
 )
 
+print("FAN")
 proj_fan = fan_fp.get_fp_pmap(
     vol, angles, 
     vx_size, 
@@ -47,6 +49,7 @@ proj_fan = fan_fp.get_fp_pmap(
     z_source, z_det
 )
 
+print("CONE")
 proj_cone = cone_fp.get_fp_pmap(
     vol, angles, 
     vx_size, 
@@ -56,20 +59,39 @@ proj_cone = cone_fp.get_fp_pmap(
 )
 
 
+
+
+
 fig, ax = subplots(2, 3, figsize=(14, 8))
+
 ax[0, 0].imshow(proj_par[:vol_sh_x, nrows//4])
 ax[0, 1].imshow(proj_fan[:vol_sh_x, nrows//4])
 ax[0, 2].imshow(proj_cone[:vol_sh_x, nrows//4])
 ax[1, 0].imshow(proj_par[n_angles//16])
 ax[1, 1].imshow(proj_fan[n_angles//16])
 ax[1, 2].imshow(proj_cone[n_angles//16])
-ax[1, 0].axhline(nrows//4, color="gray", ls="--")
-ax[1, 1].axhline(nrows//4, color="gray", ls="--")
-ax[1, 2].axhline(nrows//4, color="gray", ls="--")
+
 ax[0, 0].set_title("Parallel beam")
 ax[0, 1].set_title("Fan beam")
 ax[0, 2].set_title("Cone beam")
 ax[0, 0].set_ylabel("Sinogram")
 ax[1, 0].set_ylabel("Projection")
+
+for a in ax[0]:
+    for spine in a.spines.values():
+        spine.set_edgecolor("blue")
+        spine.set_linewidth(3)
+for a in ax[1]:
+    for spine in a.spines.values():
+        spine.set_edgecolor("red")
+        spine.set_linewidth(3)
+
+ax[0, 0].axhline(n_angles//16, color="red")
+ax[0, 1].axhline(n_angles//16, color="red")
+ax[0, 2].axhline(n_angles//16, color="red")
+ax[1, 0].axhline(nrows//4, color="blue")
+ax[1, 1].axhline(nrows//4, color="blue")
+ax[1, 2].axhline(nrows//4, color="blue")
+
 tight_layout()
 show()
