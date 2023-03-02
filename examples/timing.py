@@ -1,18 +1,38 @@
 import os
 import timeit
 import jax.numpy as jnp
+import argparse
 
 from jaxtomo import cone_fp, cone_bp
 from jaxtomo import util
 
-GPU      = eval(os.environ.get("GPU", "None"))
-PREALLOC = bool(os.environ.get("PREALLOC", "0") != "0")
-PMAP     = bool(os.environ.get("PMAP", "0") != "0")
-FP       = bool(os.environ.get("FP", "1") != "0")
-BP       = bool(os.environ.get("BP", "1") != "0")
-SIZE     = int (os.environ.get("SIZE", "0"))
+###############################################################################
+# ARGUMENTS
+###############################################################################
 
-print(f"GPU conf: GPU #{GPU}, prealloc={PREALLOC}, pmap={PMAP}, FP={FP}, BP={BP}")
+# sorry for this horrible usage of argparse
+parser = argparse.ArgumentParser(description="Timing of cone FP and BP")
+parser.add_argument("--gpu"     , default="None", help="ID(s) of GPUs to use")
+parser.add_argument("--prealloc", default="1"   , help="Use preallocation of GPU memory")
+parser.add_argument("--pmap"    , default="0"   , help="Use multi-GPU via jax.pmap (requires multiple , identical GPUs)")
+parser.add_argument("--fp"      , default="1"   , help="Time forward projection")
+parser.add_argument("--bp"      , default="1"   , help="Time back projection")
+parser.add_argument("--size"    , default="0"   , help="Size of volume and projections to time")
+
+args = parser.parse_args()
+GPU      = eval(args.gpu)   # None, int or tuple
+PREALLOC = bool(args.prealloc)
+PMAP     = bool(args.pmap)
+FP       = bool(args.fp)
+BP       = bool(args.bp)
+SIZE     = int(args.size)
+
+print("gpu      :", repr(GPU))
+print("prealloc :", repr(PREALLOC))
+print("pmap     :", repr(PMAP))
+print("fp       :", repr(FP))
+print("bp       :", repr(BP))
+print("size     :", repr(SIZE))
 
 if GPU is None:
     util.set_platform("cpu")
@@ -22,6 +42,9 @@ else:
     util.set_preallocation(PREALLOC)
     util.set_cuda_device(*GPU, verbose=False)
 
+###############################################################################
+# TIMING
+###############################################################################
 
 def get_timing_fp(sh_vol, sh_proj):
     vx_size = 1.
