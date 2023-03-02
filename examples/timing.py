@@ -11,6 +11,8 @@ from jaxtomo import util
 ###############################################################################
 
 # sorry for this horrible usage of argparse
+# I don't get how to handle bools with it 
+
 parser = argparse.ArgumentParser(description="Timing of cone FP and BP")
 parser.add_argument("--gpu"     , default="None", help="ID(s) of GPUs to use")
 parser.add_argument("--prealloc", default="1"   , help="Use preallocation of GPU memory")
@@ -21,10 +23,10 @@ parser.add_argument("--size"    , default="0"   , help="Size of volume and proje
 
 args = parser.parse_args()
 GPU      = eval(args.gpu)   # None, int or tuple
-PREALLOC = bool(args.prealloc)
-PMAP     = bool(args.pmap)
-FP       = bool(args.fp)
-BP       = bool(args.bp)
+PREALLOC = bool(eval(args.prealloc))
+PMAP     = bool(eval(args.pmap))
+FP       = bool(eval(args.fp))
+BP       = bool(eval(args.bp))
 SIZE     = int(args.size)
 
 print("gpu      :", repr(GPU))
