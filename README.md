@@ -24,8 +24,7 @@ This is a personal project and very work-in-progress. It is meant as a learning 
 * Other FP methods (Siddon, Footprint, ...)
 * Curved detector
 * Different voxel basis functions [[1]](https://pubmed.ncbi.nlm.nih.gov/17278818/), [[2]](https://www.researchgate.net/publication/263921475_Projector_and_Backprojector_for_Iterative_CT_Reconstruction_with_Blobs_using_CUDA)
-* speedup [bilinear interpolation](https://github.com/clemisch/jaxtomo/blob/d47796a41381975d4e195eee6360bc93561013e3/jaxtomo/util.py#L47)   
-(which I think is the main reason for the comparatively slow FP. I can't profile JAX because [it's broken atm](https://github.com/google/jax/issues/13009).)
+* speedup [bilinear interpolation](https://github.com/clemisch/jaxtomo/blob/d47796a41381975d4e195eee6360bc93561013e3/jaxtomo/util.py#L47) and/or profile FP, as it's rather slow
 
 ## Proof of concept
 
