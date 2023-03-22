@@ -8,8 +8,8 @@ from jaxtomo import cone_bp as P_bp
 from jaxtomo import proj_filter
 from jaxtomo import util
 
-util.set_preallocation(True)
-util.set_cuda_device(0,1)
+util.set_preallocation(False)
+util.set_cuda_device(2)
 
 vol_sh_x = 256
 nslices = vol_sh_x
@@ -46,8 +46,9 @@ nrows = nslices
 px_height = M
 vol_sh_y = nslices
 
-proj = P_fp.get_fp_pmap(
-    vol, angles, 
+proj = P_fp.get_fp(
+    vol, 
+    angles, 
     vx_size, 
     ncols, px_width, 
     nrows, px_height,
@@ -67,6 +68,28 @@ fbp = fbp / n_angles
 
 
 
+uu = linspace(-0.5, 0.5, ncols, True) * (ncols - 1) * px_width
+vv = linspace(-0.5, 0.5, nrows, True) * (nrows - 1) * px_height
+
+fdk_weights = (z_source + z_det) / sqrt(
+    square(z_source + z_det) + 
+    square(uu)[None] + 
+    square(vv)[:, None]
+)
+
+fbp2 = P_bp.get_bp(
+    proj_filter.proj_filter(proj * fdk_weights[None], w), 
+    angles, 
+    px_width, px_height, 
+    vol_sh_x, vol_sh_y, vx_size, 
+    z_source, z_det
+)
+fbp2 = fbp2 / n_angles
+
+
+
+
+
 figure(figsize=(12, 4))
 subplot(131)
 imshow(vol[nslices//2], vmin=0, vmax=vol.max())
@@ -81,6 +104,7 @@ title("Cone FBP")
 subplot(133)
 plot(vol[nslices//2, vol_sh_x//2], label="Ground Truth")
 plot(fbp[nslices//2, vol_sh_x//2], label="FBP")
+plot(fbp2[nslices//2, vol_sh_x//2], label="FBP weighted")
 legend()
 title("Comparison")
 tight_layout()
