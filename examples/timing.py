@@ -14,12 +14,13 @@ from jaxtomo import util
 # I don't get how to handle bools with it 
 
 parser = argparse.ArgumentParser(description="Timing of cone FP and BP")
-parser.add_argument("--gpu"     , default="None", help="ID(s) of GPUs to use")
-parser.add_argument("--prealloc", default="1"   , help="Use preallocation of GPU memory")
-parser.add_argument("--pmap"    , default="0"   , help="Use multi-GPU via jax.pmap (requires multiple , identical GPUs)")
-parser.add_argument("--fp"      , default="1"   , help="Time forward projection")
-parser.add_argument("--bp"      , default="1"   , help="Time back projection")
-parser.add_argument("--size"    , default="0"   , help="Size of volume and projections to time")
+parser.add_argument("--gpu"     , default="None"   , help="ID(s) of GPUs to use")
+parser.add_argument("--prealloc", default="1"      , help="Use preallocation of GPU memory")
+parser.add_argument("--pmap"    , default="0"      , help="Use multi-GPU via jax.pmap (requires multiple , identical GPUs)")
+parser.add_argument("--fp"      , default="1"      , help="Time forward projection")
+parser.add_argument("--bp"      , default="1"      , help="Time back projection")
+parser.add_argument("--size"    , default="0"      , help="Size of volume and projections to time")
+parser.add_argument("--dtype"   , default="float32", help="Dtype of arrays used")
 
 args = parser.parse_args()
 GPU      = eval(args.gpu)   # None, int or tuple
@@ -28,6 +29,7 @@ PMAP     = bool(eval(args.pmap))
 FP       = bool(eval(args.fp))
 BP       = bool(eval(args.bp))
 SIZE     = int(args.size)
+DTYPE    = str(args.dtype)
 
 print("gpu      :", repr(GPU))
 print("prealloc :", repr(PREALLOC))
@@ -35,6 +37,7 @@ print("pmap     :", repr(PMAP))
 print("fp       :", repr(FP))
 print("bp       :", repr(BP))
 print("size     :", repr(SIZE))
+print("dtype    :", repr(DTYPE))
 
 if GPU is None:
     util.set_platform("cpu")
@@ -58,7 +61,7 @@ def get_timing_fp(sh_vol, sh_proj):
     z_source = sh_vol[1]
     z_det = z_source
     angles = jnp.linspace(0., 2 * jnp.pi, nangles, False)
-    vol = jnp.ones(sh_vol, dtype="float32")
+    vol = jnp.ones(sh_vol, dtype=DTYPE)
 
     if PMAP:
         fp_fun = cone_fp.get_fp_pmap
@@ -92,7 +95,7 @@ def get_timing_bp(sh_vol, sh_proj):
     z_source = sh_vol[1]
     z_det = z_source
     angles = jnp.linspace(0., 2 * jnp.pi, nangles, False)
-    proj = jnp.ones(sh_proj, dtype="float32")
+    proj = jnp.ones(sh_proj, dtype=DTYPE)
 
     if PMAP:
         bp_fun = cone_bp.get_bp_pmap
@@ -121,13 +124,14 @@ if SIZE > 0:
     ]
 else:
     configs = [
-        ((128,) * 3, (256, 8, 128)),
-        ((256,) * 3, (512, 8, 256)),
-        ((256,) * 3, (512, 16, 256)),
-        ((256,) * 3, (512, 32, 256)),
-        ((512,) * 3, (1024, 8, 512)),
-        ((512,) * 3, (1024, 512, 512)),
-        ((48, 800, 800), (2400, 32, 672)),
+        # ((128,) * 3, (256, 8, 128)),
+        # ((256,) * 3, (512, 8, 256)),
+        # ((256,) * 3, (512, 16, 256)),
+        # ((256,) * 3, (512, 32, 256)),
+        # ((512,) * 3, (1024, 8, 512)),
+        # ((512,) * 3, (1024, 512, 512)),
+        # ((48, 800, 800), (2400, 32, 672)),
+        ((8, 512, 512), (1024, 512, 512)),
     ]
 
 
