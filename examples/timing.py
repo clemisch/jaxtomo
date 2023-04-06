@@ -10,24 +10,23 @@ from jaxtomo import util
 # ARGUMENTS
 ###############################################################################
 
-# sorry for this horrible usage of argparse
-# I don't get how to handle bools with it 
-
-parser = argparse.ArgumentParser(description="Timing of cone FP and BP")
-parser.add_argument("--gpu"     , default="None"   , help="ID(s) of GPUs to use")
-parser.add_argument("--prealloc", default="1"      , help="Use preallocation of GPU memory")
-parser.add_argument("--pmap"    , default="0"      , help="Use multi-GPU via jax.pmap (requires multiple , identical GPUs)")
-parser.add_argument("--fp"      , default="1"      , help="Time forward projection")
-parser.add_argument("--bp"      , default="1"      , help="Time back projection")
+parser = argparse.ArgumentParser(
+    description="Timing of cone FP and BP",
+)
+parser.add_argument("--gpu"     , default="None"   , help="ID(s) of GPUs to use (None, int or tuple)")
+parser.add_argument("--prealloc", default=True     , help="Use preallocation of GPU memory", action="store_true")
+parser.add_argument("--pmap"    , default=False    , help="Use multi-GPU via jax.pmap (requires multiple, identical GPUs)", action="store_true")
+parser.add_argument("--fp"      , default=True     , help="Benchmark forward-projection", action="store_true")
+parser.add_argument("--bp"      , default=True     , help="Benchmark back-projection", action="store_true")
 parser.add_argument("--size"    , default="0"      , help="Size of volume and projections to time")
-parser.add_argument("--dtype"   , default="float32", help="Dtype of arrays used")
+parser.add_argument("--dtype"   , default="float32", help="dtype of arrays used")
 
 args = parser.parse_args()
 GPU      = eval(args.gpu)   # None, int or tuple
-PREALLOC = bool(eval(args.prealloc))
-PMAP     = bool(eval(args.pmap))
-FP       = bool(eval(args.fp))
-BP       = bool(eval(args.bp))
+PREALLOC = args.prealloc
+PMAP     = args.pmap
+FP       = args.fp
+BP       = args.bp
 SIZE     = int(args.size)
 DTYPE    = str(args.dtype)
 
@@ -46,6 +45,9 @@ else:
     util.set_platform("gpu")
     util.set_preallocation(PREALLOC)
     util.set_cuda_device(*GPU, verbose=False)
+
+if PMAP:
+    assert len(GPU) > 1, "pmap requires multiple GPUs"
 
 ###############################################################################
 # TIMING
