@@ -14,12 +14,12 @@ parser = argparse.ArgumentParser(
     description="Timing of cone FP and BP",
 )
 parser.add_argument("--gpu"     , default="None"   , help="ID(s) of GPUs to use (None, int or tuple)")
-parser.add_argument("--prealloc", default=True     , help="Use preallocation of GPU memory", action="store_true")
-parser.add_argument("--pmap"    , default=False    , help="Use multi-GPU via jax.pmap (requires multiple, identical GPUs)", action="store_true")
-parser.add_argument("--fp"      , default=True     , help="Benchmark forward-projection", action="store_true")
-parser.add_argument("--bp"      , default=True     , help="Benchmark back-projection", action="store_true")
 parser.add_argument("--size"    , default="0"      , help="Size of volume and projections to time")
 parser.add_argument("--dtype"   , default="float32", help="dtype of arrays used")
+parser.add_argument("--prealloc", default=False    , help="Use preallocation of GPU memory", action="store_true")
+parser.add_argument("--pmap"    , default=False    , help="Use multi-GPU via jax.pmap (requires multiple, identical GPUs)", action="store_true")
+parser.add_argument("--fp"      , default=False    , help="Benchmark forward-projection", action="store_true")
+parser.add_argument("--bp"      , default=False    , help="Benchmark back-projection", action="store_true")
 
 args = parser.parse_args()
 GPU      = eval(args.gpu)   # None, int or tuple
