@@ -51,7 +51,7 @@ def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
 
 
 @partial(jax.jit, static_argnames=("U", "V"))
-def _get_fp_angle(vol, theta, dX, U, dU, V, dV, s, d, princ_dir):
+def _get_fp_row(vol, thetas, dX, U, dU, V, dV, s, d, princ_dir):
     dZ = dX  # cubic voxels
     Z = vol.shape[0]
     X = vol.shape[1]
