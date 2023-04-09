@@ -50,31 +50,8 @@ def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
     return ray
 
 
-@partial(jax.jit, static_argnames=("U", "V"))
-def _get_fp_angle(vol, theta, dX, U, dU, V, dV, s, d, princ_dir):
-    dZ = dX  # cubic voxels
-    Z = vol.shape[0]
-    X = vol.shape[1]
-
-    # width in px/vx => one px/vx smaller than physical volume/detector!
-    width_img = dX * (X - 1)
-    height_img = dZ * (Z - 1)
-    width_proj = dU * (U - 1)
-    height_proj = dV * (V - 1)
-
-    # origins
-    O_X = dX * (-0.5 * X + 0.5)
-    O_Z = dZ * (-0.5 * Z + 0.5)
-    O_U = dU * (-0.5 * U + 0.5)
-    O_V = dV * (-0.5 * V + 0.5)
-
-    # axes for volume and projector
-    xx = jnp.linspace(0., 1., X, endpoint=True) * width_img + O_X
-    yy = jnp.linspace(0., 1., X, endpoint=True) * width_img + O_X
-    zz = jnp.linspace(0., 1., Z, endpoint=True) * height_img + O_Z
-    uu = jnp.linspace(0., 1., U, endpoint=True) * width_proj + O_U
-    vv = jnp.linspace(0., 1., V, endpoint=True) * height_proj + O_V
-
+@jax.jit
+def _get_fp_angle(vol, theta, xx, yy, zz, uu, vv, s, d, princ_dir):
     # handle principal direction
     nrots = princ_dir - 1
     theta = theta - nrots * jnp.pi / 2
@@ -119,13 +96,36 @@ _get_princ_dirs = jax.vmap(_get_princ_dir)
 
 @partial(jax.jit, static_argnames=("U", "V"))
 def get_fp(vol, thetas, dX, U, dU, V, dV, s, d):
-    
     princ_dirs = _get_princ_dirs(thetas)
+
+    # cubic voxels
+    dZ = dX
+    Z = vol.shape[0]
+    X = vol.shape[1]
+
+    # width in px/vx => one px/vx smaller than physical volume/detector!
+    width_img = dX * (X - 1)
+    height_img = dZ * (Z - 1)
+    width_proj = dU * (U - 1)
+    height_proj = dV * (V - 1)
+
+    # origins
+    O_X = dX * (-0.5 * X + 0.5)
+    O_Z = dZ * (-0.5 * Z + 0.5)
+    O_U = dU * (-0.5 * U + 0.5)
+    O_V = dV * (-0.5 * V + 0.5)
+
+    # axes for volume and projector
+    xx = jnp.linspace(0., 1., X, endpoint=True) * width_img + O_X
+    yy = jnp.linspace(0., 1., X, endpoint=True) * width_img + O_X
+    zz = jnp.linspace(0., 1., Z, endpoint=True) * height_img + O_Z
+    uu = jnp.linspace(0., 1., U, endpoint=True) * width_proj + O_U
+    vv = jnp.linspace(0., 1., V, endpoint=True) * height_proj + O_V
 
     # map over angles to get full FP
     def mapfun(args):
         theta, princ_dir = args
-        return _get_fp_angle(vol, theta, dX, U, dU, V, dV, s, d, princ_dir)
+        return _get_fp_angle(vol, theta, xx, yy, zz, uu, vv, s, d, princ_dir)
 
     projs = jaxmap(mapfun, (thetas, princ_dirs), unroll=1)
 
