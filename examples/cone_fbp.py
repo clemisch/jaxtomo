@@ -11,7 +11,7 @@ from jaxtomo import util
 util.set_preallocation(True)
 util.set_cuda_device(0,1)
 
-vol_sh_x = 256
+vol_sh_x = 128
 nslices = vol_sh_x
 
 # local
