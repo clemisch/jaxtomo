@@ -14,16 +14,6 @@ util.set_cuda_device(0,1)
 vol_sh_x = 256
 nslices = vol_sh_x
 
-# local
-# fname = "/buffer/schmid/forbild_head.npz"
-# fname = "/home/clem/forbild_head.npz"
-# vol = array(load(fname)["arr_0"])
-# vol = vol.transpose(1, 0, 2)
-# vol = vol / vol_sh_x
-# vol = nd.zoom(vol, vol_sh_x / vol.shape[0], order=1)
-# vol = jax.device_put(vol)
-
-# general
 vol = zeros((vol_sh_x, vol_sh_x, vol_sh_x), dtype="float32")
 vol[
     nslices//4 : nslices//4 + nslices//2,

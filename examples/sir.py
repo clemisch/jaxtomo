@@ -15,19 +15,21 @@ from jaxtomo import util
 util.set_preallocation(True)
 util.set_cuda_device(2)
 
+# pre-rendered 3D volume 
+# TODO: generate in this package
 # fname = "/home/clem/forbild_head.npz"
 fname = "/buffer/schmid/forbild_head.npz"
 
 vol = array(load(fname)["arr_0"])
 vol = vol.transpose(1, 0, 2)
-N = 256
+N = 128
 vol = vol / N
 vol = nd.zoom(vol, N / vol.shape[0], order=1)
 vol = jax.device_put(vol)
 
-z_source = -1000
-z_det = 1000
-M = (z_det - z_source) / abs(z_source)
+z_source = N
+z_det = z_source * 10
+M = (z_det + z_source) / abs(z_source)
 
 n_angles = N * 2
 angles = linspace(0, 2 * pi, n_angles, False)
@@ -37,7 +39,6 @@ ncols = N
 px_width = M
 nrows = 8
 px_height = 1.
-
 
 proj = P_fp.get_fp(
     vol, angles, 
@@ -74,7 +75,6 @@ fbp_noise = P_bp.get_bp(
     vol_sh_x, vol_sh_y, vx_size, 
     z_source, z_det
 ) / n_angles
-
 
 
 ###############################################################################

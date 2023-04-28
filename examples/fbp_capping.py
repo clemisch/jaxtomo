@@ -11,14 +11,11 @@ from jaxtomo import util
 util.set_preallocation(False)
 util.set_cuda_device(2)
 
-fname = "/buffer/schmid/forbild_head.npz"
-
 vol_sh_x = 256
 nslices = 16
 
 vol = zeros((nslices, vol_sh_x, vol_sh_x), dtype="float32")
 vol[:, 16:-16, 16:-16] = util.roundmask(vol_sh_x - 32, vol_sh_x - 32)
-
 
 z_source = 500
 z_det = 4000
