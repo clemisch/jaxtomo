@@ -10,7 +10,7 @@ import jax.numpy as jnp
 import jax.scipy as jsp
 
 from functools import partial
-from .util import multi_vmap
+from ..util import multi_vmap
 
 print("UPDATED PINV")
 

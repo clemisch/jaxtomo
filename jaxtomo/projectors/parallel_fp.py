@@ -1,9 +1,8 @@
 import jax
 import jax.numpy as jnp
-import jax.scipy as jsp
 from functools import partial
 
-from .util import multi_vmap, interp2d, jaxmap
+from ..util import multi_vmap, interp2d, jaxmap
 
 
 def _get_ray_2d(vol, theta, u, v, xx, yy):

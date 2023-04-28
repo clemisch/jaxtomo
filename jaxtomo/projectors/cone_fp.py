@@ -2,34 +2,41 @@ import jax
 import jax.numpy as jnp
 from functools import partial
 
-from .util import multi_vmap, interp2d, jaxmap
+from ..util import multi_vmap, interp2d, jaxmap
 
 
 def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
     # pixel coords
     Dx = d * jnp.cos(theta) - u * jnp.sin(theta)
     Dy = d * jnp.sin(theta) + u * jnp.cos(theta)
+    Dz = v
 
     # source coords
     Sx = -s * jnp.cos(theta)
     Sy = -s * jnp.sin(theta)
+    Sz = 0.0
 
     # ray from source to pixel
     Rx = Dx - Sx
     Ry = Dy - Sy
+    Rz = Dz - Sz
 
     # worker function to get interpolated value of `img_slice` at `x`
     def get_point(x, img_slice):
         dx = x - Sx
         dy = dx / Rx * Ry
+        dz = dx / Rx * Rz
+
         y = Sy + dy
+        z = Sz + dz
 
         val = interp2d(
-            v, y,
+            z, y,
             (zz[0], zz[-1]), 
             (yy[0], yy[-1]), 
             img_slice
         )
+
         return val
 
     # all points along ray, one for each slice
@@ -37,8 +44,8 @@ def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
     ray = jnp.sum(points)
 
     # weight with length through voxel
-    angle_tot = jnp.arctan2(Ry, Rx)
-    ray = ray / jnp.cos(angle_tot)
+    raylen = Rx / jnp.sqrt(Rx**2 + Ry**2 + Rz**2)
+    ray = ray / raylen
 
     return ray
 
@@ -88,10 +95,10 @@ def _get_fp_angle(vol, theta, dX, U, dU, V, dV, s, d, princ_dir):
     get_proj = multi_vmap(
         _get_ray,
         (
-            (None, None, 0, None, None, None, None, None, None), 
-            (None, None, None, 0, None, None, None, None, None)
+            (None, None, None, 0   , None, None, None, None, None), 
+            (None, None, 0   , None, None, None, None, None, None)
         ),
-        (0, 0)
+        (0, 1)
     )
     proj = get_proj(vol, theta, uu, vv, xx, yy, zz, s, d)
 
@@ -125,7 +132,6 @@ def get_fp(vol, thetas, dX, U, dU, V, dV, s, d):
     return projs
 
 
-
 # TODO: change to "static_argnames" once JAX supports it
 @partial(
     jax.pmap, 
@@ -137,6 +143,7 @@ def _get_fp_pmap(vol, thetas, dX, U, dU, V, dV, s, d):
     return proj
 
 
+@partial(jax.jit, static_argnames=("U", "V"))
 def get_fp_pmap(vol, thetas, dX, U, dU, V, dV, s, d):
     nangles = thetas.shape[0]
     ndevices = jax.device_count()

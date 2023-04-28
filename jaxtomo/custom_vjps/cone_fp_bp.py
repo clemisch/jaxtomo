@@ -1,13 +1,13 @@
 import jax
 
-from . import fan_fp
-from . import fan_bp
+from jaxtomo.projectors import cone_fp
+from jaxtomo.projectors import cone_bp
 
 
 def get_fp_bp(angles, X, dX, Y, U, dU, V, dV, S, D):
     @jax.custom_vjp
     def project(vol):
-        proj = fan_fp.get_fp(vol, angles, dX, U, dU, V, dV, S, D)
+        proj = cone_fp.get_fp(vol, angles, dX, U, dU, V, dV, S, D)
         return proj
 
     def _project_fwd(vol):
@@ -20,7 +20,7 @@ def get_fp_bp(angles, X, dX, Y, U, dU, V, dV, S, D):
 
     @jax.custom_vjp
     def backproject(proj):
-        vol = fan_bp.get_bp(proj, angles, dU, dV, X, Y, dX, S, D)
+        vol = cone_bp.get_bp(proj, angles, dU, dV, X, Y, dX, S, D)
         return vol
 
     def _backproject_fwd(proj):

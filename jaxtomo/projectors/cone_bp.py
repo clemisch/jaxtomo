@@ -3,7 +3,7 @@ import jax.numpy as jnp
 import jax.scipy as jsp
 from functools import partial
 
-from .util import multi_vmap, interp2d
+from ..util import multi_vmap, interp2d
 
 
 def _get_voxel(proj, theta, x, y, z, uu, vv, S, D):
