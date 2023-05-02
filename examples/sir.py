@@ -17,8 +17,7 @@ util.set_cuda_device(2)
 
 # pre-rendered 3D volume 
 # TODO: generate in this package
-# fname = "/home/clem/forbild_head.npz"
-fname = "/buffer/schmid/forbild_head.npz"
+fname = "/users/schmid/forbild_head.npz"
 
 vol = array(load(fname)["arr_0"])
 vol = vol.transpose(1, 0, 2)
