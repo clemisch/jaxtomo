@@ -16,6 +16,7 @@ This is a personal project and very work-in-progress. It is meant as a learning 
 * FBP
 * ... all with a flat detector
 * FP and BP registered as respective transpose for autodiff with JAX
+* End-to-end SIR via autodiff
 * `jax.pmap` for multi-GPU speedup
 
 ## Todo
