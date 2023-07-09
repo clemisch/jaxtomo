@@ -63,6 +63,30 @@ def interp2d(x, y, xlims, ylims, vals):
     return vals_interp
 
 
+def interp3d(x, y, z, xlims, ylims, zlims, vals):
+    x_lo, x_hi = xlims
+    y_lo, y_hi = ylims
+    z_lo, z_hi = zlims
+    n_x, n_y, n_z = vals.shape
+
+    # transform x,y into pixel values
+    x = (x - x_lo) * (n_x - 1.) / (x_hi - x_lo)
+    y = (y - y_lo) * (n_y - 1.) / (y_hi - y_lo)
+    z = (z - z_lo) * (n_z - 1.) / (z_hi - z_lo)
+
+    vals_interp = jsp.ndimage.map_coordinates(
+        vals, 
+        (x, y, z), 
+        order=1,
+        mode="constant", 
+        cval=0.0,
+    )
+    return vals_interp
+
+
+
+
+
 def jaxmap(f, xs, unroll=1):
     """ Redefine jax.lax.map to get unroll support """
     g = lambda _, x: ((), f(x))

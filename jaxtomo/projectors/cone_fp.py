@@ -1,8 +1,9 @@
+import numpy as np
 import jax
 import jax.numpy as jnp
 from functools import partial
 
-from ..util import multi_vmap, interp2d, jaxmap
+from ..util import multi_vmap, interp2d, interp3d, jaxmap
 
 
 def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
@@ -22,7 +23,7 @@ def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
     Rz = Dz - Sz
 
     # worker function to get interpolated value of `img_slice` at `x`
-    def get_point(x, img_slice):
+    def get_point(x):
         dx = x - Sx
         dy = dx / Rx * Ry
         dz = dx / Rx * Rz
@@ -30,17 +31,18 @@ def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
         y = Sy + dy
         z = Sz + dz
 
-        val = interp2d(
-            z, y,
+        val = interp3d(
+            z, x, y, 
             (zz[0], zz[-1]), 
+            (xx[0], xx[-1]), 
             (yy[0], yy[-1]), 
-            img_slice
+            vol
         )
 
         return val
 
     # all points along ray, one for each slice
-    points = jax.vmap(get_point, (0, 1), 0)(xx, vol)
+    points = jax.vmap(get_point)(xx)
     ray = jnp.sum(points)
 
     # weight with length through voxel
@@ -50,6 +52,7 @@ def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
     return ray
 
 
+# @partial(jax.jit, static_argnames=("U", "V", "princ_dir"))
 @partial(jax.jit, static_argnames=("U", "V"))
 def _get_fp_angle(vol, theta, dX, U, dU, V, dV, s, d, princ_dir):
     dZ = dX  # cubic voxels
@@ -76,20 +79,24 @@ def _get_fp_angle(vol, theta, dX, U, dU, V, dV, s, d, princ_dir):
     vv = jnp.linspace(0., 1., V, endpoint=True) * height_proj + O_V
 
     # handle principal direction
-    nrots = princ_dir - 1
+    nrots = princ_dir
     theta = theta - nrots * jnp.pi / 2
 
     def body_fun(i, arg):
-        xx, yy, vol = arg
-        vol = jnp.transpose(vol, (0, 2, 1))
+        xx, yy = arg
         xx, yy = yy, -xx
-        return xx, yy, vol
+        return xx, yy
 
-    xx, yy, vol = jax.lax.fori_loop(
+    xx, yy = jax.lax.fori_loop(
         0, nrots,
         body_fun,
-        (xx, yy, vol)
+        (xx, yy)
     )
+
+    # for _ in range(nrots):
+    #     vol = jnp.transpose(vol, (0, 2, 1))
+    #     xx, yy = yy, -xx
+
 
     # map over all pixels to get one projection
     get_proj = multi_vmap(
@@ -110,17 +117,22 @@ def _get_fp_angle(vol, theta, dX, U, dU, V, dV, s, d, princ_dir):
 def _get_princ_dir(theta):
     theta = theta + jnp.pi / 4
     theta = (theta + 2 * jnp.pi) % (2 * jnp.pi)
-    princ_dir = jnp.floor_divide(theta, jnp.pi / 2) + 1
+    princ_dir = jnp.floor_divide(theta, jnp.pi / 2)
     return princ_dir.astype("int32")
 
-_get_princ_dirs = jax.vmap(_get_princ_dir)
 
+
+def _get_princ_dir_np(theta):
+    theta = theta + np.pi / 4
+    theta = (theta + 2 * np.pi) % (2 * np.pi)
+    princ_dir = np.floor_divide(theta, np.pi / 2)
+    return princ_dir.astype("int32")
 
 
 @partial(jax.jit, static_argnames=("U", "V"))
 def get_fp(vol, thetas, dX, U, dU, V, dV, s, d):
     
-    princ_dirs = _get_princ_dirs(thetas)
+    princ_dirs = _get_princ_dir(thetas)
 
     # map over angles to get full FP
     def mapfun(args):
@@ -130,6 +142,20 @@ def get_fp(vol, thetas, dX, U, dU, V, dV, s, d):
     projs = jaxmap(mapfun, (thetas, princ_dirs), unroll=1)
 
     return projs
+
+
+
+# def get_fp(vol, thetas, dX, U, dU, V, dV, s, d):
+#     princ_dirs = _get_princ_dir(thetas)
+
+
+
+
+
+
+
+
+
 
 
 # TODO: change to "static_argnames" once JAX supports it
