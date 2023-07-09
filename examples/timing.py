@@ -53,6 +53,12 @@ if PMAP:
 # TIMING
 ###############################################################################
 
+PRINTOUT = []
+def _log(msg):
+    PRINTOUT.append(str(msg))
+
+
+
 def get_timing_fp(sh_vol, sh_proj):
     vx_size = 1.
     nangles = sh_proj[0]
@@ -69,6 +75,11 @@ def get_timing_fp(sh_vol, sh_proj):
         fp_fun = cone_fp.get_fp_pmap
     else:
         fp_fun = cone_fp.get_fp
+
+
+    # princ_dirs = cone_fp._get_princ_dir_np(angles)
+    # _log(princ_dirs)
+
 
     def get_proj():
         projs = fp_fun(
@@ -138,7 +149,7 @@ else:
 
 
 if FP:
-    print("*** FP ***")
+    _log("==== FP ====")
     for config in configs:
         sh_vol, sh_proj = config
         dt = get_timing_fp(sh_vol, sh_proj)
@@ -149,7 +160,7 @@ if FP:
         GRay = nrays / 1000.**3
         Grays = GRay / dt
 
-        print((
+        _log((
             f"{str(sh_vol):15} -> {str(sh_proj):15} : {dt * 1e3:5.0f} ms , "
             f"{dt_ray * 1e6:5.2f} µs per pixel , "
             f"{Grays:2.3f} GRays/s"
@@ -157,7 +168,7 @@ if FP:
 
 
 if BP:
-    print("*** BP ***")
+    _log("==== BP ====")
     for config in configs:
         sh_vol, sh_proj = config
         dt = get_timing_bp(sh_vol, sh_proj)
@@ -168,8 +179,10 @@ if BP:
         GRay = nvoxels / 1000.**3
         Grays = GRay / dt
 
-        print((
+        _log((
             f"{str(sh_proj):15} -> {str(sh_vol):15} : {dt * 1e3:5.0f} ms , "
             f"{dt_voxel * 1e6:5.2f} µs per voxel , "
             f"{Grays:2.3f} GRays/s"
         ))
+
+print("\n".join(PRINTOUT))
