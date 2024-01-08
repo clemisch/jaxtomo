@@ -27,6 +27,7 @@ This is a personal project and very work-in-progress. It is meant as a learning 
 * Different voxel basis functions [[1]](https://pubmed.ncbi.nlm.nih.gov/17278818/), [[2]](https://www.researchgate.net/publication/263921475_Projector_and_Backprojector_for_Iterative_CT_Reconstruction_with_Blobs_using_CUDA)
 * speedup [bilinear interpolation](https://github.com/clemisch/jaxtomo/blob/d47796a41381975d4e195eee6360bc93561013e3/jaxtomo/util.py#L47) and/or profile FP, as it's rather slow.   
   According to `examples/timing.py`, FP takes ~5x longer than BP.
+* Try [JAX Pallas](https://jax.readthedocs.io/en/latest/pallas/index.html)
 
 ## Proof of concept
 
