@@ -6,7 +6,7 @@ setup(
     description="Tomographic projector in JAX.",
     author="Clemens Schmid",
     author_email="clem.schmid@tum.de",
-    packages=["jaxtomo"],
+    packages=["jaxtomo", "jaxtomo.projectors", "jaxtomo.custom_vjps"],
     install_requires=["numpy", "scipy", "jax"],
     license="MIT",
 )
