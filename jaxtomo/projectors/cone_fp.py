@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+import numpy as np
 from functools import partial
 
 from ..util import multi_vmap, interp2d, jaxmap
@@ -7,19 +8,6 @@ from ..util import multi_vmap, interp2d, jaxmap
 
 def _rotate_xy_90(vol):
     return jnp.transpose(vol, (0, 2, 1))
-
-
-def _select_rotated_volume(rot_idx, vol0, vol1, vol2, vol3):
-    return jax.lax.switch(
-        rot_idx,
-        (
-            lambda _: vol0,
-            lambda _: vol1,
-            lambda _: vol2,
-            lambda _: vol3,
-        ),
-        operand=None
-    )
 
 
 def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
@@ -68,7 +56,31 @@ def _get_ray(vol, theta, u, v, xx, yy, zz, s, d):
 
 
 @jax.jit
-def _get_fp_angle(vol0, vol1, vol2, vol3, theta, xx_base, zz, uu, vv, s, d, princ_dir):
+def _get_fp_angle_oriented(vol, theta, xx, yy, zz, uu, vv, s, d):
+    # map over all pixels to get one projection
+    get_proj = multi_vmap(
+        _get_ray,
+        (
+            (None, None, None, 0   , None, None, None, None, None), 
+            (None, None, 0   , None, None, None, None, None, None)
+        ),
+        (0, 1)
+    )
+    proj = get_proj(vol, theta, uu, vv, xx, yy, zz, s, d)
+    return proj
+
+
+@jax.jit
+def _get_fp_angles_oriented(vol, thetas, xx, yy, zz, uu, vv, s, d):
+    return jaxmap(
+        lambda theta: _get_fp_angle_oriented(vol, theta, xx, yy, zz, uu, vv, s, d),
+        thetas,
+        unroll=1
+    )
+
+
+@jax.jit
+def _get_fp_angle_jit(vol0, vol1, theta, xx_base, zz, uu, vv, s, d, princ_dir):
     rot_idx = princ_dir - 1
     theta = theta - rot_idx * jnp.pi / 2
 
@@ -80,20 +92,13 @@ def _get_fp_angle(vol0, vol1, vol2, vol3, theta, xx_base, zz, uu, vv, s, d, prin
 
     xx = xx_sign * xx_base
     yy = yy_sign * xx_base
-    vol = _select_rotated_volume(rot_idx, vol0, vol1, vol2, vol3)
-
-    # map over all pixels to get one projection
-    get_proj = multi_vmap(
-        _get_ray,
-        (
-            (None, None, None, 0   , None, None, None, None, None), 
-            (None, None, 0   , None, None, None, None, None, None)
-        ),
-        (0, 1)
+    vol = jax.lax.cond(
+        jnp.equal(jnp.bitwise_and(rot_idx, jnp.int32(1)), jnp.int32(1)),
+        lambda _: vol1,
+        lambda _: vol0,
+        operand=None
     )
-    proj = get_proj(vol, theta, uu, vv, xx, yy, zz, s, d)
-
-    return proj
+    return _get_fp_angle_oriented(vol, theta, xx, yy, zz, uu, vv, s, d)
 
 
 
@@ -107,9 +112,14 @@ def _get_princ_dir(theta):
 _get_princ_dirs = jax.vmap(_get_princ_dir)
 
 
+def _get_princ_dirs_np(thetas):
+    theta = thetas + np.pi / 4
+    theta = (theta + 2 * np.pi) % (2 * np.pi)
+    princ_dir = np.floor_divide(theta, np.pi / 2) + 1
+    return princ_dir.astype(np.int32)
 
-@partial(jax.jit, static_argnames=("U", "V"))
-def get_fp(vol, thetas, dX, U, dU, V, dV, s, d):
+
+def _build_axes(vol, dX, U, dU, V, dV):
     dZ = dX  # cubic voxels
     Z = vol.shape[0]
     X = vol.shape[1]
@@ -130,26 +140,83 @@ def get_fp(vol, thetas, dX, U, dU, V, dV, s, d):
     zz = jnp.linspace(0., 1., Z, endpoint=True) * height_img + O_Z
     uu = jnp.linspace(0., 1., U, endpoint=True) * width_proj + O_U
     vv = jnp.linspace(0., 1., V, endpoint=True) * height_proj + O_V
+    return xx_base, zz, uu, vv
 
-    # Precompute all principal-direction rotations once per FP call.
+
+@partial(jax.jit, static_argnames=("U", "V"))
+def _get_fp_jit(vol, thetas, dX, U, dU, V, dV, s, d):
+    xx_base, zz, uu, vv = _build_axes(vol, dX, U, dU, V, dV)
+
+    # For runtime-dispatched JIT path, only two rotated volumes are distinct.
     vol0 = vol
     vol1 = _rotate_xy_90(vol0)
-    vol2 = _rotate_xy_90(vol1)
-    vol3 = _rotate_xy_90(vol2)
-
     princ_dirs = _get_princ_dirs(thetas)
 
     # map over angles to get full FP
     def mapfun(args):
         theta, princ_dir = args
-        return _get_fp_angle(
-            vol0, vol1, vol2, vol3,
+        return _get_fp_angle_jit(
+            vol0, vol1,
             theta, xx_base, zz, uu, vv, s, d, princ_dir
         )
 
     projs = jaxmap(mapfun, (thetas, princ_dirs), unroll=1)
-
     return projs
+
+
+def _is_tracer(x):
+    return isinstance(x, jax.core.Tracer)
+
+
+def get_fp(vol, thetas, dX, U, dU, V, dV, s, d):
+    if _is_tracer(vol) or _is_tracer(thetas):
+        return _get_fp_jit(vol, thetas, dX, U, dU, V, dV, s, d)
+
+    xx_base, zz, uu, vv = _build_axes(vol, dX, U, dU, V, dV)
+
+    thetas_np = np.asarray(thetas)
+    princ_dirs = _get_princ_dirs_np(thetas_np)
+    nangles = thetas_np.shape[0]
+
+    if nangles == 0:
+        return jnp.zeros((0, V, U), dtype=vol.dtype)
+
+    # Only two volume orientations are needed with this rotation scheme.
+    need_transposed_vol = np.any(np.logical_or(princ_dirs == 2, princ_dirs == 4))
+    vol_t = _rotate_xy_90(vol) if need_transposed_vol else None
+
+    proj_chunks = []
+    idx_chunks = []
+    dir_specs = (
+        # (princ_dir, x_sign, y_sign, theta_offset, use_transposed_vol)
+        (1,  1.0,  1.0, 0.0, False),
+        (2,  1.0, -1.0, np.pi / 2, True),
+        (3, -1.0, -1.0, np.pi, False),
+        (4, -1.0,  1.0, 3 * np.pi / 2, True),
+    )
+
+    for princ_dir, x_sign, y_sign, theta_offset, use_tvol in dir_specs:
+        idx_np = np.where(princ_dirs == princ_dir)[0]
+        if idx_np.size == 0:
+            continue
+
+        idx = jnp.asarray(idx_np, dtype=jnp.int32)
+        vol_sel = vol_t if use_tvol else vol
+        thetas_sel = thetas[idx] - theta_offset
+        xx = x_sign * xx_base
+        yy = y_sign * xx_base
+
+        projs = _get_fp_angles_oriented(vol_sel, thetas_sel, xx, yy, zz, uu, vv, s, d)
+        proj_chunks.append(projs)
+        idx_chunks.append(idx_np)
+
+    if len(proj_chunks) == 1:
+        return proj_chunks[0]
+
+    proj_cat = jnp.concatenate(proj_chunks, axis=0)
+    idx_cat = np.concatenate(idx_chunks)
+    inv_idx = jnp.asarray(np.argsort(idx_cat), dtype=jnp.int32)
+    return proj_cat[inv_idx]
 
 
 # TODO: change to "static_argnames" once JAX supports it
@@ -159,7 +226,7 @@ def get_fp(vol, thetas, dX, U, dU, V, dV, s, d):
     static_broadcasted_argnums=(3, 5)
 )
 def _get_fp_pmap(vol, thetas, dX, U, dU, V, dV, s, d):
-    proj = get_fp(vol, thetas, dX, U, dU, V, dV, s, d)
+    proj = _get_fp_jit(vol, thetas, dX, U, dU, V, dV, s, d)
     return proj
 
 
