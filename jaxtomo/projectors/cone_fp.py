@@ -75,9 +75,7 @@ def _get_fp_angle(vol0, vol1, vol2, vol3, theta, xx_base, zz, uu, vv, s, d, prin
     # Mapping from principal direction to axis orientation.
     xx_sign = jnp.where(rot_idx < 2, 1.0, -1.0).astype(xx_base.dtype)
     yy_sign = jnp.where(
-        jnp.logical_or(rot_idx == 0, rot_idx == 3),
-        1.0,
-        -1.0
+        jnp.logical_or(rot_idx == 0, rot_idx == 3), 1.0, -1.0
     ).astype(xx_base.dtype)
 
     xx = xx_sign * xx_base
